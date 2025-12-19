@@ -49,6 +49,5 @@ resource "caddy_server" "https" {
 
   routes = [
     module.jellyfin.caddy_route,
-    module.jellyfin.local_caddy_route,
   ]
 }
