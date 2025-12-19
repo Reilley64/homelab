@@ -45,7 +45,7 @@ module "jellyfin" {
 
   name    = "jellyfin"
   image   = "linuxserver/jellyfin:latest"
-  network = docker_network.media.id
+  networks = [docker_network.media.id]
 
   env = local.shared_env
 
@@ -80,7 +80,6 @@ module "gluetun" {
 
   name    = "gluetun"
   image   = "qmcgaw/gluetun:latest"
-  network = docker_network.torrents.id
 
   capabilities = ["NET_ADMIN"]
 
@@ -106,7 +105,7 @@ module "qbittorrent" {
 
   name    = "qbittorrent"
   image   = "linuxserver/qbittorrent:latest"
-  network = "service:gluetun"
+  forward = "service:gluetun"
 
   env = concat(local.shared_env, [
     "WEBUI_PORT=8080",

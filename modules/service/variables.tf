@@ -19,8 +19,14 @@ variable "ports" {
   default = []
 }
 
-variable "network" {
+variable "networks" {
+  type = list(string)
+  default = []
+}
+
+variable "forward" {
   type = string
+  default = null
 }
 
 variable "env" {

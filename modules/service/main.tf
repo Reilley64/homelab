@@ -42,8 +42,13 @@ resource "docker_container" "container" {
     value = "false"
   }
 
-  networks_advanced {
-    name = var.network
+  network_mode = var.forward
+
+  dynamic "networks_advanced" {
+    for_each = var.networks
+    content {
+      name = networks_advanced.value
+    }
   }
 
   dynamic "ports" {
