@@ -54,8 +54,3 @@ variable "privileged" {
   type = bool
   default = false
 }
-
-variable "public" {
-  type = bool
-  default = false
-}
