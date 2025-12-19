@@ -107,7 +107,7 @@ module "qbittorrent" {
 
   name    = "qbittorrent"
   image   = "linuxserver/qbittorrent:latest"
-  forward = "container:gluetun"
+  forward = "container:${module.gluetun.id}"
 
   env = concat(local.shared_env, [
     "WEBUI_PORT=8080",
@@ -127,8 +127,6 @@ module "qbittorrent" {
       host_path      = "/mnt/media"
     },
   ]
-
-  depends_on = [module.gluetun]
 }
 
 resource "caddy_server" "https" {
