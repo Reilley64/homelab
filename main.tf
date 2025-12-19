@@ -1,7 +1,7 @@
 provider "docker" {}
 
 provider "caddy" {
-  host = ""
+  host = "unix:///run/caddy/admin.sock"
 }
 
 module "jellyfin" {
