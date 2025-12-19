@@ -7,6 +7,7 @@ resource "docker_container" "container" {
   image = docker_image.image.image_id
   name = var.name
   restart = "unless-stopped"
+  privileged = var.privileged
 
   env = var.env
 

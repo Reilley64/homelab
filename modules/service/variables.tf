@@ -49,3 +49,8 @@ variable "volumes" {
   }))
   default = []
 }
+
+variable "privileged" {
+  type = bool
+  default = false
+}
