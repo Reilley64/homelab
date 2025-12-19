@@ -74,7 +74,7 @@ resource "docker_container" "container" {
 
 data "caddy_server_route" "route" {
   match {
-    host = var.public ? ["${var.name}.reilley.dev", "${var.name}.local"] : ["${var.name}.local"]
+    host = var.public ? ["${var.name}.reilley.dev", "http://${var.name}.localdomain"] : ["http://${var.name}.localdomain"]
   }
 
   dynamic "handle" {
