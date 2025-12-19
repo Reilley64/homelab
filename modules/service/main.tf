@@ -68,10 +68,13 @@ data "caddy_server_route" "route" {
     host = ["${var.name}.reilley.dev", "${var.name}.local"]
   }
 
-  handle {
-    reverse_proxy {
-      upstream {
-        dial = var.ports.0.external_port
+  dynamic "handle" {
+    for_each = var.ports
+    content {
+      reverse_proxy {
+        upstream {
+          dial = handle.value.external_port
+        }
       }
     }
   }
