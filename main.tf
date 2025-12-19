@@ -80,6 +80,7 @@ module "gluetun" {
 
   name    = "gluetun"
   image   = "qmcgaw/gluetun:latest"
+  privileged = true
 
   capabilities = ["NET_ADMIN"]
 
