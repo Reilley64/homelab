@@ -45,8 +45,8 @@ resource "docker_container" "container" {
   dynamic "ports" {
     for_each = var.ports
     content {
-      internal_port = ports.value.internal_port
-      external_port = ports.value.external_port
+      internal = ports.value.internal_port
+      external = ports.value.external_port
     }
   }
 
@@ -85,14 +85,4 @@ data "caddy_server_route" "local_route" {
       }
     }
   }
-}
-
-resource "caddy_server" "https" {
-  name = "https"
-  listen = [":443"]
-
-  routes = [
-    data.caddy_server_route.jellyfin,
-
-  ]
 }
