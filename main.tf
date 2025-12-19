@@ -6,6 +6,34 @@ provider "caddy" {
   host = "unix:///run/caddy/admin.sock"
 }
 
+module "bitwarden" {
+  source = "./modules/service"
+
+  name    = "bitwarden"
+  image   = "vaultwarden/server:latest"
+  network = docker_network.media.id
+
+  env = [
+    "TZ=Australia/Melbourne",
+    "PGID=1000",
+    "PUID=1000",
+  ]
+
+  ports = [
+    {
+      internal_port = 80
+      external_port = 800
+    },
+  ]
+
+  volumes = [
+    {
+      container_path = "/data"
+      host_path      = "/home/reilley/appdata/bitwarden"
+    },
+  ]
+}
+
 module "jellyfin" {
   source = "./modules/service"
 
@@ -15,7 +43,7 @@ module "jellyfin" {
 
   env = [
     "TZ=Australia/Melbourne",
-    "PGID=100",
+    "PGID=1000",
     "PUID=1000",
   ]
 
