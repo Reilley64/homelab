@@ -43,9 +43,10 @@ locals {
 module "jellyfin" {
   source = "./modules/service"
 
-  name    = "jellyfin"
-  image   = "linuxserver/jellyfin:latest"
+  name     = "jellyfin"
+  image    = "linuxserver/jellyfin:latest"
   networks = [docker_network.media.id]
+  public   = true
 
   env = local.shared_env
 
@@ -78,8 +79,8 @@ module "jellyfin" {
 module "gluetun" {
   source = "./modules/service"
 
-  name    = "gluetun"
-  image   = "qmcgaw/gluetun:latest"
+  name       = "gluetun"
+  image      = "qmcgaw/gluetun:latest"
   privileged = true
 
   capabilities = ["NET_ADMIN"]

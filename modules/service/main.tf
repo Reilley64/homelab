@@ -71,7 +71,7 @@ resource "docker_container" "container" {
 
 data "caddy_server_route" "route" {
   match {
-    host = ["${var.name}.reilley.dev", "${var.name}.local"]
+    host = var.public ? ["${var.name}.reilley.dev", "${var.name}.local"] : ["${var.name}.local"]
   }
 
   dynamic "handle" {
@@ -79,7 +79,7 @@ data "caddy_server_route" "route" {
     content {
       reverse_proxy {
         upstream {
-          dial = handle.value.external_port
+          dial = "localhost:${handle.value.external_port}"
         }
       }
     }
