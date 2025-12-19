@@ -1,11 +1,11 @@
 resource "docker_image" "image" {
-  name = var.image
+  name         = var.image
   keep_locally = false
 }
 
 resource "docker_container" "container" {
-  image = docker_image.image.image_id
-  name = var.name
+  image   = docker_image.image.image_id
+  name    = var.name
   restart = "unless-stopped"
 
   env = var.env
@@ -14,7 +14,7 @@ resource "docker_container" "container" {
     for_each = var.devices
     content {
       container_path = devices.value.container_path
-      host_path = devices.value.host_path
+      host_path      = devices.value.host_path
     }
   }
 
@@ -55,6 +55,7 @@ resource "docker_container" "container" {
     content {
       container_path = volumes.value.container_path
       host_path      = volumes.value.host_path
+      selinux        = "Z"
     }
   }
 }
