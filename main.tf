@@ -1,5 +1,5 @@
 provider "docker" {
-  host = "unix:///var/run/podman.sock"
+  host = "unix:///run/user/1000/podman/podman.sock"
 }
 
 provider "caddy" {
@@ -50,6 +50,6 @@ resource "caddy_server" "https" {
   listen = [":443"]
 
   routes = [
-    module.jellyfin.caddy_route,
+    module.jellyfin.caddy_route.id,
   ]
 }
