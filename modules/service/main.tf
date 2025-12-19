@@ -91,7 +91,7 @@ data "caddy_server_route" "route" {
 
 data "caddy_server_route" "local_route" {
   match {
-    host = ["http://${var.name}.localdomain"]
+    host = ["${var.name}.localdomain"]
   }
 
   dynamic "handle" {
