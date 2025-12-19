@@ -136,13 +136,3 @@ resource "caddy_server" "https" {
     module.jellyfin.caddy_route.id,
   ]
 }
-
-resource "caddy_server" "http" {
-  name = "http"
-  listen = [":80"]
-
-  routes = [
-    module.jellyfin.local_route.id,
-    module.qbittorrent.local_route.id,
-  ]
-}
