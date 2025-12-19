@@ -6,6 +6,11 @@ variable "image" {
   type = string
 }
 
+variable "capabilities" {
+  type = list(string)
+  default = []
+}
+
 variable "ports" {
   type = list(object({
     internal_port = number

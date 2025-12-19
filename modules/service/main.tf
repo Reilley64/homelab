@@ -10,6 +10,10 @@ resource "docker_container" "container" {
 
   env = var.env
 
+  capabilities {
+    add = var.capabilities
+  }
+
   dynamic "devices" {
     for_each = var.devices
     content {
@@ -53,7 +57,7 @@ resource "docker_container" "container" {
   dynamic "volumes" {
     for_each = var.volumes
     content {
-      container_path = "${volumes.value.container_path}"
+      container_path = volumes.value.container_path
       host_path      = volumes.value.host_path
     }
   }
