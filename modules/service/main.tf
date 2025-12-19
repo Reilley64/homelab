@@ -73,8 +73,6 @@ resource "docker_container" "container" {
 }
 
 data "caddy_server_route" "route" {
-  count = var.public ? 1 : 0
-
   match {
     host = ["${var.name}.reilley.dev"]
   }
