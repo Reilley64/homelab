@@ -1,6 +1,4 @@
-provider "docker" {
-  host = "unix:///run/user/1000/podman/podman.sock"
-}
+provider "docker" {}
 
 provider "caddy" {
   host = "unix:///run/caddy/admin.sock"
