@@ -64,7 +64,7 @@ module "jellyfin" {
   volumes = [
     {
       container_path = "/config"
-      host_path      = "/home/reilley/appdata/jellyfin"
+      host_path      = "/home/core/appdata/jellyfin"
     },
     {
       container_path = "/mnt/media"
