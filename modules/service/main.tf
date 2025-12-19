@@ -67,7 +67,7 @@ data "caddy_server_route" "route" {
   handle {
     reverse_proxy {
       upstream {
-        dial = "localhost:8096"
+        dial = var.ports.0.external_port
       }
     }
   }
