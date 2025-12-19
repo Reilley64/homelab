@@ -53,7 +53,7 @@ resource "docker_container" "container" {
   dynamic "volumes" {
     for_each = var.volumes
     content {
-      container_path = "${volumes.value.container_path}:Z"
+      container_path = "${volumes.value.container_path}"
       host_path      = volumes.value.host_path
     }
   }
