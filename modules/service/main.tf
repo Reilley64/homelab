@@ -61,21 +61,7 @@ resource "docker_container" "container" {
 
 data "caddy_server_route" "route" {
   match {
-    host = "${var.name}.example.invalid"
-  }
-
-  handle {
-    reverse_proxy {
-      upstream {
-        dial = "localhost:8096"
-      }
-    }
-  }
-}
-
-data "caddy_server_route" "local_route" {
-  match {
-    host = "${var.name}.local"
+    host = ["${var.name}.example.invalid", "${var.name}.local"]
   }
 
   handle {
