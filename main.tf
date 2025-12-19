@@ -125,6 +125,8 @@ module "qbittorrent" {
       host_path      = "/mnt/media"
     },
   ]
+
+  depends_on = [module.gluetun]
 }
 
 resource "caddy_server" "https" {
