@@ -73,8 +73,27 @@ resource "docker_container" "container" {
 }
 
 data "caddy_server_route" "route" {
+  count = var.public ? 1 : 0
+
   match {
-    host = var.public ? ["${var.name}.reilley.dev", "http://${var.name}.localdomain"] : ["http://${var.name}.localdomain"]
+    host = "${var.name}.reilley.dev"
+  }
+
+  dynamic "handle" {
+    for_each = var.ports
+    content {
+      reverse_proxy {
+        upstream {
+          dial = "localhost:${handle.value.external_port}"
+        }
+      }
+    }
+  }
+}
+
+data "caddy_server_route" "local_route" {
+  match {
+    host = ["http://${var.name}.localdomain"]
   }
 
   dynamic "handle" {
