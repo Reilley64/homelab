@@ -105,7 +105,7 @@ module "qbittorrent" {
 
   name    = "qbittorrent"
   image   = "linuxserver/qbittorrent:latest"
-  forward = "service:gluetun"
+  forward = "container:gluetun"
 
   env = concat(local.shared_env, [
     "WEBUI_PORT=8080",
