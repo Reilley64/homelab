@@ -46,7 +46,6 @@ module "jellyfin" {
   name     = "jellyfin"
   image    = "linuxserver/jellyfin:latest"
   networks = [docker_network.media.id]
-  public   = true
 
   env = local.shared_env
 
