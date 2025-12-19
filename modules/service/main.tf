@@ -50,12 +50,16 @@ resource "docker_container" "container" {
     }
   }
 
-  dynamic "volumes" {
+  dynamic "mounts" {
     for_each = var.volumes
     content {
-      container_path = volumes.value.container_path
-      host_path      = volumes.value.host_path
-      selinux        = "Z"
+      target = mounts.value.container_path
+      source = mounts.value.host_path
+      type   = "bind"
+
+      bind_options {
+        selinux = "Z"
+      }
     }
   }
 }
