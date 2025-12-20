@@ -11,6 +11,11 @@ variable "capabilities" {
   default = []
 }
 
+variable "port" {
+  type = number
+  default = null
+}
+
 variable "ports" {
   type = list(object({
     internal_port = number
