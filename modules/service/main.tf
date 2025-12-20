@@ -79,14 +79,6 @@ resource "docker_container" "container" {
     }
   }
 
-  dynamic "labels" {
-    for_each = var.public ? var.ports : []
-    content {
-      label = "traefik.http.services.${var.name}.loadbalancer.server.port"
-      value = labels.value.internal_port
-    }
-  }
-
   labels {
     label = "traefik.http.routers.${var.name}local.rule"
     value = "Host(`${var.name}.localdomain`)"
@@ -99,13 +91,13 @@ resource "docker_container" "container" {
 
   labels {
     label = "traefik.http.routers.${var.name}local.service"
-    value = "${var.name}local"
+    value = var.name
   }
 
   dynamic "labels" {
     for_each = var.ports
     content {
-      label = "traefik.http.services.${var.name}local.loadbalancer.server.port"
+      label = "traefik.http.services.${var.name}.loadbalancer.server.port"
       value = labels.value.internal_port
     }
   }
