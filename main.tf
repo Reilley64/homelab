@@ -1,33 +1,5 @@
 provider "docker" {}
 
-# module "bitwarden" {
-#   source = "./modules/service"
-#
-#   name    = "bitwarden"
-#   image   = "vaultwarden/server:latest"
-#   network = docker_network.media.id
-#
-#   env = [
-#     "TZ=Australia/Melbourne",
-#     "PGID=1000",
-#     "PUID=1000",
-#   ]
-#
-#   ports = [
-#     {
-#       internal_port = 80
-#       external_port = 800
-#     },
-#   ]
-#
-#   volumes = [
-#     {
-#       container_path = "/data"
-#       host_path      = "/home/reilley/appdata/bitwarden"
-#     },
-#   ]
-# }
-
 locals {
   shared_env = [
     "TZ=Australia/Melbourne",
