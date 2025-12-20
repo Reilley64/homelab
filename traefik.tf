@@ -1,10 +1,17 @@
+resource "docker_network" "traefik" {
+  name = "torrents"
+  driver = "bridge"
+}
+
 module "traefik" {
   source = "./modules/service"
 
   name     = "traefik"
   image    = "traefik:latest"
+  networks = [docker_network.traefik.id]
 
   env = local.shared_env
+
   command = [
     "--api.insecure=true",
     "--providers.docker=true",
