@@ -51,7 +51,7 @@ resource "docker_container" "container" {
     count = var.public ? 1 : 0
 
     label = "traefik.http.routers.${var.name}.rule"
-    value = "Host('${name}.reilley.dev')"
+    value = "Host('${var.name}.reilley.dev')"
   }
 
   network_mode = var.forward
