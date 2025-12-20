@@ -7,11 +7,7 @@ module "bitwarden" {
   port    = 80
   networks = [docker_network.traefik.id]
 
-  env = [
-    "TZ=Australia/Melbourne",
-    "PGID=1000",
-    "PUID=1000",
-  ]
+  env = local.shared_env
 
   volumes = [
     {
