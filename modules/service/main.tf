@@ -63,6 +63,14 @@ resource "docker_container" "container" {
     }
   }
 
+  dynamic "labels" {
+    for_each = var.ports
+    content {
+      label = "traefik.http.services.${var.name}.loadbalancer.server.port"
+      value = labels.value.internal_port
+    }
+  }
+
   dynamic "networks_advanced" {
     for_each = var.networks
     content {
