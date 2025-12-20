@@ -1,5 +1,5 @@
 resource "docker_network" "traefik" {
-  name = "torrents"
+  name = "traefik"
   driver = "bridge"
 }
 
