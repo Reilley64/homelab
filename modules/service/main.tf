@@ -57,6 +57,7 @@ resource "docker_container" "container" {
     for_each = length(var.capabilities) > 0 ? [1] : []
     content {
       add = var.capabilities
+      drop = []
     }
   }
 
@@ -65,6 +66,7 @@ resource "docker_container" "container" {
     content {
       container_path = devices.value.container_path
       host_path      = devices.value.host_path
+      permissions    = "rwm"
     }
   }
 
