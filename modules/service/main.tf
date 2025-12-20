@@ -4,7 +4,6 @@ locals {
 
   base_labels = {
     "traefik.docker.network" = "traefik"
-    "traefik.http.services.${var.name}.loadbalancer.server.port" = var.port
   }
 
   glance_labels = {
@@ -13,6 +12,10 @@ locals {
     "glance.icon" = "si:${var.name}"
     "glance.hide" = "false"
   }
+
+  traefik_port_label = var.port ? {
+    "traefik.http.services.${var.name}.loadbalancer.server.port" = var.port
+  } : {}
 
   traefik_public_labels = var.public ? {
     "traefik.http.routers.${var.name}.rule"             = "Host(`${local.hostname}`)"
@@ -30,6 +33,7 @@ locals {
   labels = merge(
     local.base_labels,
     local.glance_labels,
+    local.traefik_port_label,
     local.traefik_public_labels,
     local.traefik_local_labels
   )
