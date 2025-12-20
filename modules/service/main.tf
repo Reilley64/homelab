@@ -1,16 +1,16 @@
 resource "docker_image" "image" {
-  name = var.image
+  name         = var.image
   keep_locally = false
 }
 
 resource "docker_container" "container" {
-  image = docker_image.image.image_id
-  name = var.name
-  restart = "unless-stopped"
-  privileged = var.privileged
-
-  env = var.env
-  command = var.command
+  image        = docker_image.image.image_id
+  name         = var.name
+  restart      = "unless-stopped"
+  privileged   = var.privileged
+  network_mode = var.forward
+  env          = var.env
+  command      = var.command
 
   dynamic "capabilities" {
     for_each = length(var.capabilities) > 0 ? [1] : []
@@ -23,7 +23,7 @@ resource "docker_container" "container" {
     for_each = var.devices
     content {
       container_path = devices.value.container_path
-      host_path = devices.value.host_path
+      host_path      = devices.value.host_path
     }
   }
 
@@ -51,11 +51,9 @@ resource "docker_container" "container" {
     for_each = var.public ? [1] : []
     content {
       label = "traefik.http.routers.${var.name}.rule"
-      value = "Host('${var.name}.reilley.dev')"
+      value = "Host(`${var.name}.reilley.dev`)"
     }
   }
-
-  network_mode = var.forward
 
   dynamic "networks_advanced" {
     for_each = var.networks
