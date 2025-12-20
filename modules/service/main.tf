@@ -1,3 +1,43 @@
+locals {
+  hostname       = "${var.name}.reilley.dev"
+  local_hostname = "${var.name}.localdomain"
+
+  base_labels = {
+    "traefik.docker.network" = "traefik"
+    "traefik.http.services.${var.name}.loadbalancer.server.port" = var.port
+  }
+
+  glance_labels = {
+    "glance.name" = title(var.name)
+    "glance.url"  = "https://${local.hostname}"
+    "glance.icon" = "si:${var.name}"
+    "glance.hide" = "false"
+  }
+
+  traefik_public_labels = var.public ? {
+    "traefik.enable" = "true"
+
+    "traefik.http.routers.${var.name}.rule"             = "Host(`${local.hostname}`)"
+    "traefik.http.routers.${var.name}.entrypoints"      = "websecure"
+    "traefik.http.routers.${var.name}.tls.certresolver" = "myresolver"
+    "traefik.http.routers.${var.name}.service"          = var.name
+
+  } : {}
+
+  traefik_local_labels = {
+    "traefik.http.routers.${var.name}local.rule"        = "Host(`${local.local_hostname}`)"
+    "traefik.http.routers.${var.name}local.entrypoints" = "web"
+    "traefik.http.routers.${var.name}local.service"     = var.name
+  }
+
+  labels = merge(
+    local.base_labels,
+    local.glance_labels,
+    local.traefik_public_labels,
+    local.traefik_local_labels
+  )
+}
+
 resource "docker_image" "image" {
   name         = var.image
   keep_locally = false
@@ -12,6 +52,8 @@ resource "docker_container" "container" {
   env          = var.env
   command      = var.command
 
+  labels = local.labels
+
   dynamic "capabilities" {
     for_each = length(var.capabilities) > 0 ? [1] : []
     content {
@@ -24,86 +66,6 @@ resource "docker_container" "container" {
     content {
       container_path = devices.value.container_path
       host_path      = devices.value.host_path
-    }
-  }
-
-  labels {
-    label = "glance.name"
-    value = title("Jellyfin")
-  }
-
-  labels {
-    label = "glance.url"
-    value = "https://${var.name}.reilley.dev"
-  }
-
-  labels {
-    label = "glance.icon"
-    value = "si:${var.name}"
-  }
-
-  labels {
-    label = "glance.hide"
-    value = "false"
-  }
-
-  labels {
-    label = "traefik.docker.network"
-    value = "traefik"
-  }
-
-  dynamic "labels" {
-    for_each = var.public ? [1] : []
-    content {
-      label = "traefik.http.routers.${var.name}.rule"
-      value = "Host(`${var.name}.reilley.dev`)"
-    }
-  }
-
-  dynamic "labels" {
-    for_each = var.public ? [1] : []
-    content {
-      label = "traefik.http.routers.${var.name}.entrypoints"
-      value = "websecure"
-    }
-  }
-
-  dynamic "labels" {
-    for_each = var.public ? [1] : []
-    content {
-      label = "traefik.http.routers.${var.name}.tls.certresolver"
-      value = "myresolver"
-    }
-  }
-
-  dynamic "labels" {
-    for_each = var.public ? [1] : []
-    content {
-      label = "traefik.http.routers.${var.name}.service"
-      value = var.name
-    }
-  }
-
-  labels {
-    label = "traefik.http.routers.${var.name}local.rule"
-    value = "Host(`${var.name}.localdomain`)"
-  }
-
-  labels {
-    label = "traefik.http.routers.${var.name}local.entrypoints"
-    value = "web"
-  }
-
-  labels {
-    label = "traefik.http.routers.${var.name}local.service"
-    value = var.name
-  }
-
-  dynamic "labels" {
-    for_each = var.ports
-    content {
-      label = "traefik.http.services.${var.name}.loadbalancer.server.port"
-      value = labels.value.internal_port
     }
   }
 

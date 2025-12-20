@@ -9,6 +9,7 @@ module "jellyfin" {
   name     = "jellyfin"
   image    = "linuxserver/jellyfin:latest"
   public   = true
+  port     = 8096
   networks = [docker_network.media.id, docker_network.traefik.id]
 
   env = local.shared_env
@@ -17,13 +18,6 @@ module "jellyfin" {
     {
       container_path = "/dev/dri"
       host_path      = "/dev/dri"
-    },
-  ]
-
-  ports = [
-    {
-      internal_port = 8096
-      external_port = 8096
     },
   ]
 
