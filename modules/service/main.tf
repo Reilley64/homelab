@@ -13,7 +13,7 @@ locals {
     "glance.hide" = "false"
   }
 
-  traefik_port_label = var.port ? {
+  traefik_port_label = var.port != null ? {
     "traefik.http.services.${var.name}.loadbalancer.server.port" = var.port
   } : {}
 
