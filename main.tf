@@ -1,9 +1,5 @@
 provider "docker" {}
 
-provider "caddy" {
-  host = "unix:///run/caddy/admin.sock"
-}
-
 # module "bitwarden" {
 #   source = "./modules/service"
 #
