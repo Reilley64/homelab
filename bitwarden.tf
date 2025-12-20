@@ -5,7 +5,7 @@ module "bitwarden" {
   image   = "vaultwarden/server:latest"
   public  = true
   port    = 80
-  network = [docker_network.traefik.id]
+  networks = [docker_network.traefik.id]
 
   env = [
     "TZ=Australia/Melbourne",
