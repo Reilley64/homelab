@@ -99,6 +99,7 @@ resource "docker_container" "container" {
     content {
       container_path = volumes.value.container_path
       host_path      = volumes.value.host_path
+      read_only      = false
     }
   }
 }
