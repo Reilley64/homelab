@@ -9,7 +9,7 @@ module "jellyfin" {
   name     = "jellyfin"
   image    = "linuxserver/jellyfin:latest"
   public   = true
-  networks = [docker_network.media.id]
+  networks = [docker_network.media.id, docker_network.traefik.id]
 
   env = local.shared_env
 
