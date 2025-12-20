@@ -25,6 +25,10 @@ module "traefik" {
       external_port = 80
     },
     {
+      internal_port = 443
+      external_port = 443
+    },
+    {
       internal_port = 8080
       external_port = 4040
     },

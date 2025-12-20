@@ -59,7 +59,7 @@ resource "docker_container" "container" {
     for_each = var.public ? [1] : []
     content {
       label = "traefik.http.routers.${var.name}.entrypoints"
-      value = "web"
+      value = "websecure"
     }
   }
 
