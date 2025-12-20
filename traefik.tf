@@ -9,6 +9,7 @@ module "traefik" {
     "--api.insecure=true",
     "--providers.docker=true",
     "--entrypoints.web.address=:80",
+    "--entrypoints.websecure.address=:443",
   ]
 
   ports = [
