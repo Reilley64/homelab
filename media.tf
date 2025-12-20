@@ -1,5 +1,5 @@
 resource "docker_network" "media" {
-  name = "media"
+  name   = "media"
   driver = "bridge"
 }
 
@@ -8,6 +8,7 @@ module "jellyfin" {
 
   name     = "jellyfin"
   image    = "linuxserver/jellyfin:latest"
+  public   = true
   networks = [docker_network.media.id]
 
   env = local.shared_env
