@@ -10,6 +10,7 @@ resource "docker_container" "container" {
   privileged = var.privileged
 
   env = var.env
+  command = var.command
 
   dynamic "capabilities" {
     for_each = length(var.capabilities) > 0 ? [1] : []
@@ -46,6 +47,13 @@ resource "docker_container" "container" {
     value = "false"
   }
 
+  labels {
+    count = var.public ? 1 : 0
+
+    label = "traefik.http.routers.${var.name}.rule"
+    value = "Host('${name}.reilley.dev')"
+  }
+
   network_mode = var.forward
 
   dynamic "networks_advanced" {
@@ -68,40 +76,6 @@ resource "docker_container" "container" {
     content {
       container_path = volumes.value.container_path
       host_path      = volumes.value.host_path
-    }
-  }
-}
-
-data "caddy_server_route" "route" {
-  match {
-    host = ["${var.name}.reilley.dev"]
-  }
-
-  dynamic "handle" {
-    for_each = var.ports
-    content {
-      reverse_proxy {
-        upstream {
-          dial = "localhost:${handle.value.external_port}"
-        }
-      }
-    }
-  }
-}
-
-data "caddy_server_route" "local_route" {
-  match {
-    host = ["${var.name}.localdomain"]
-  }
-
-  dynamic "handle" {
-    for_each = var.ports
-    content {
-      reverse_proxy {
-        upstream {
-          dial = "localhost:${handle.value.external_port}"
-        }
-      }
     }
   }
 }

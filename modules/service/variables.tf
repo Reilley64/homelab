@@ -54,3 +54,13 @@ variable "privileged" {
   type = bool
   default = false
 }
+
+variable "command" {
+  type = list(string)
+  default = []
+}
+
+variable "public" {
+  type = bool
+  default = false
+}
