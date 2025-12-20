@@ -17,6 +17,9 @@ module "traefik" {
     "--providers.docker=true",
     "--entrypoints.web.address=:80",
     "--entrypoints.websecure.address=:443",
+    "--certificatesresolvers.myresolver.acme.tlschallenge=true",
+    "--certificatesresolvers.myresolver.acme.email=reilleygray@gmail.com",
+    "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json",
   ]
 
   ports = [

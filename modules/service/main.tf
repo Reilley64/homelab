@@ -64,6 +64,14 @@ resource "docker_container" "container" {
   }
 
   dynamic "labels" {
+    for_each = var.public ? [1] : []
+    content {
+      label = "traefik.http.routers.${var.name}.tls.certresolver"
+      value = "myresolver"
+    }
+  }
+
+  dynamic "labels" {
     for_each = var.ports
     content {
       label = "traefik.http.services.${var.name}.loadbalancer.server.port"
