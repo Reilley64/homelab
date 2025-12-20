@@ -15,13 +15,10 @@ locals {
   }
 
   traefik_public_labels = var.public ? {
-    "traefik.enable" = "true"
-
     "traefik.http.routers.${var.name}.rule"             = "Host(`${local.hostname}`)"
     "traefik.http.routers.${var.name}.entrypoints"      = "websecure"
     "traefik.http.routers.${var.name}.tls.certresolver" = "myresolver"
     "traefik.http.routers.${var.name}.service"          = var.name
-
   } : {}
 
   traefik_local_labels = {
@@ -52,8 +49,6 @@ resource "docker_container" "container" {
   env          = var.env
   command      = var.command
 
-  labels = local.labels
-
   dynamic "capabilities" {
     for_each = length(var.capabilities) > 0 ? [1] : []
     content {
@@ -66,6 +61,14 @@ resource "docker_container" "container" {
     content {
       container_path = devices.value.container_path
       host_path      = devices.value.host_path
+    }
+  }
+
+  dynamic "labels" {
+    for_each = local.labels
+    content {
+      label = labels.key
+      value = labels.value
     }
   }
 
