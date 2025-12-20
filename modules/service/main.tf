@@ -47,6 +47,11 @@ resource "docker_container" "container" {
     value = "false"
   }
 
+  labels {
+    label = "traefik.docker.network"
+    value = "traefik"
+  }
+
   dynamic "labels" {
     for_each = var.public ? [1] : []
     content {
