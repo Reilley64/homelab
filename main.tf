@@ -15,7 +15,7 @@ module "gluetun" {
   image      = "qmcgaw/gluetun:latest"
   privileged = true
 
-  capabilities = ["NET_ADMIN"]
+  capabilities = ["CAP_NET_ADMIN"]
 
   env = concat(local.shared_env, [
     "VPN_SERVICE_PROVIDER=protonvpn",
