@@ -3,6 +3,48 @@ resource "docker_network" "home" {
   driver = "bridge"
 }
 
+resource "docker_image" "alpine" {
+  name         = "alpine:latest"
+  keep_locally = false
+}
+
+resource "docker_container" "homeassistant" {
+  image        = docker_image.alpine.image_id
+  name         = "homeassistant"
+  restart      = "unless-stopped"
+
+  command = [
+    "tail",
+    "-f",
+    "/dev/null",
+  ]
+
+  labels {
+    label = "traefik.http.routers.homeassistant.rule"
+    value = "Host(`homeassistant.reilley.dev`)"
+  }
+
+  labels {
+    label = "traefik.http.routers.homeassistant.entrypoints"
+    value = "websecure"
+  }
+
+  labels {
+    label = "traefik.http.routers.homeassistant.tls.certresolver"
+    value = "myresolver"
+  }
+
+  labels {
+    label = "traefik.http.routers.homeassistant.service"
+    value = "homeassistant"
+  }
+
+  labels {
+    label = "traefik.http.services.homeassistant.loadbalancer.server.url"
+    value = "http://192.168.86.139:8123"
+  }
+}
+
 module "piper" {
   source = "./modules/service"
 
