@@ -55,6 +55,14 @@ resource "docker_container" "container" {
     }
   }
 
+  dynamic "labels" {
+    for_each = var.public ? [1] : []
+    content {
+      label = "traefik.http.routers.${var.name}.entrypoints"
+      value = "websecure"
+    }
+  }
+
   dynamic "networks_advanced" {
     for_each = var.networks
     content {
