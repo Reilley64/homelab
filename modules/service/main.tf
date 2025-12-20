@@ -72,6 +72,14 @@ resource "docker_container" "container" {
   }
 
   dynamic "labels" {
+    for_each = var.public ? [1] : []
+    content {
+      label = "traefik.http.routers.${var.name}.service"
+      value = var.name
+    }
+  }
+
+  dynamic "labels" {
     for_each = var.public ? var.ports : []
     content {
       label = "traefik.http.services.${var.name}.loadbalancer.server.port"
@@ -87,6 +95,11 @@ resource "docker_container" "container" {
   labels {
     label = "traefik.http.routers.${var.name}local.entrypoints"
     value = "web"
+  }
+
+  labels {
+    label = "traefik.http.routers.${var.name}local.service"
+    value = "${var.name}local"
   }
 
   dynamic "labels" {
