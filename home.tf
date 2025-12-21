@@ -3,11 +3,6 @@ resource "docker_network" "home" {
   driver = "bridge"
 }
 
-resource "docker_image" "alpine" {
-  name         = "alpine:latest"
-  keep_locally = false
-}
-
 resource "docker_container" "homeassistant" {
   image        = docker_image.alpine.image_id
   name         = "homeassistant"

@@ -1,5 +1,5 @@
 resource "docker_network" "traefik" {
-  name = "traefik"
+  name   = "traefik"
   driver = "bridge"
 }
 
@@ -20,7 +20,7 @@ module "traefik" {
     "--certificatesresolvers.myresolver.acme.tlschallenge=true",
     "--certificatesresolvers.myresolver.acme.email=reilleygray@gmail.com",
     "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json",
-    "--tracing",
+    "--tracing.otlp.grpc=jaeger:4317",
   ]
 
   ports = [
@@ -48,4 +48,16 @@ module "traefik" {
       host_path      = "/home/reilley/appdata/letsencrypt"
     },
   ]
+}
+
+module "jaeger" {
+  source = "./modules/service"
+
+  name     = "jaeger"
+  image    = "jaegertracing/jaeger:latest"
+  public   = true
+  port     = 16686
+  networks = [docker_network.traefik.id]
+
+  env = local.shared_env
 }
