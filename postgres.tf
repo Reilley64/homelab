@@ -10,7 +10,10 @@ module "postgres" {
   image    = "postgres:14"
   networks = [docker_network.postgres.id]
 
-  env = local.shared_env
+  env = concat(local.shared_env, [
+    "POSTGRES_USER=${var.username}",
+    "POSTGRES_PASSWORD=${var.password}",
+  ])
 
   volumes = [
     {
