@@ -7,7 +7,7 @@ module "traefik" {
   source = "./modules/service"
 
   name     = "traefik"
-  image    = "traefik:latest"
+  image    = "traefik:v3.6.5"
   networks = [docker_network.traefik.id]
 
   env = local.shared_env
@@ -54,7 +54,7 @@ module "jaeger" {
   source = "./modules/service"
 
   name     = "jaeger"
-  image    = "jaegertracing/jaeger:latest"
+  image    = "jaegertracing/jaeger:2.13.0"
   port     = 16686
   networks = [docker_network.traefik.id]
 

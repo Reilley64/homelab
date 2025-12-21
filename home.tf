@@ -44,7 +44,7 @@ module "piper" {
   source = "./modules/service"
 
   name    = "piper"
-  image   = "rhasspy/wyoming-piper:latest"
+  image   = "rhasspy/wyoming-piper:2.1.2"
   port    = 10200
   networks = [docker_network.home.id]
 
@@ -73,7 +73,7 @@ module "whisper" {
   source = "./modules/service"
 
   name    = "whisper"
-  image   = "rhasspy/wyoming-whisper:latest"
+  image   = "rhasspy/wyoming-whisper:3.0.2"
   networks = [docker_network.home.id]
 
   env = local.shared_env

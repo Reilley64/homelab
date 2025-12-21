@@ -7,7 +7,7 @@ module "jellyfin" {
   source = "./modules/service"
 
   name     = "jellyfin"
-  image    = "linuxserver/jellyfin:latest"
+  image    = "lscr.io/linuxserver/jellyfin:10.11.5"
   public   = true
   port     = 8096
   networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
@@ -37,7 +37,7 @@ module "radarr" {
   source = "./modules/service"
 
   name     = "radarr"
-  image    = "linuxserver/radarr:latest"
+  image    = "lscr.io/linuxserver/radarr:6.0.4"
   port     = 7878
   networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
 
@@ -59,7 +59,7 @@ module "sonarr" {
   source = "./modules/service"
 
   name     = "sonarr"
-  image    = "linuxserver/sonarr:latest"
+  image    = "linuxserver/sonarr:4.0.16"
   port     = 8989
   networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
 
@@ -81,7 +81,7 @@ module "prowlarr" {
   source = "./modules/service"
 
   name     = "prowlarr"
-  image    = "linuxserver/prowlarr:latest"
+  image    = "linuxserver/prowlarr:2.3.0"
   port     = 9696
   networks = [docker_network.media.id, docker_network.traefik.id]
 
@@ -99,7 +99,7 @@ module "flaresolverr" {
   source = "./modules/service"
 
   name     = "flaresolverr"
-  image    = "ghcr.io/flaresolverr/flaresolverr:latest"
+  image    = "ghcr.io/flaresolverr/flaresolverr:v3.4.6"
   port     = 8191
   networks = [docker_network.media.id, docker_network.traefik.id]
 
@@ -110,7 +110,7 @@ module "profilarr" {
   source = "./modules/service"
 
   name     = "profilarr"
-  image    = "santiagosayshey/profilarr:latest"
+  image    = "santiagosayshey/profilarr:v1.1.3"
   port     = 6868
   networks = [docker_network.media.id, docker_network.traefik.id]
 
