@@ -99,7 +99,7 @@ module "flaresolverr" {
   source = "./modules/service"
 
   name     = "flaresolverr"
-  image    = "linuxserver/flaresolverr:latest"
+  image    = "ghcr.io/flaresolverr/flaresolverr:latest"
   port     = 8191
   networks = [docker_network.media.id, docker_network.traefik.id]
 
