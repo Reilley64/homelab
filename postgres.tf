@@ -22,7 +22,7 @@ module "postgres" {
   volumes = [
     {
       container_path = "/var/lib/postgresql/data"
-      host_path      = "/home/reilley/appdata/postgres"
+      host_path      = "/home/${var.username}/appdata/postgres"
     },
   ]
 }

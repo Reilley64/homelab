@@ -24,7 +24,7 @@ module "jellyfin" {
   volumes = [
     {
       container_path = "/config"
-      host_path      = "/home/reilley/appdata/jellyfin"
+      host_path      = "/home/${var.username}/appdata/jellyfin"
     },
     {
       container_path = "/mnt/media"
@@ -46,7 +46,7 @@ module "radarr" {
   volumes = [
     {
       container_path = "/config"
-      host_path      = "/home/reilley/appdata/radarr"
+      host_path      = "/home/${var.username}/appdata/radarr"
     },
     {
       container_path = "/mnt/media"
@@ -68,7 +68,7 @@ module "sonarr" {
   volumes = [
     {
       container_path = "/config"
-      host_path      = "/home/reilley/appdata/sonarr"
+      host_path      = "/home/${var.username}/appdata/sonarr"
     },
     {
       container_path = "/mnt/media"
@@ -90,7 +90,7 @@ module "prowlarr" {
   volumes = [
     {
       container_path = "/config"
-      host_path      = "/home/reilley/appdata/prowlarr"
+      host_path      = "/home/${var.username}/appdata/prowlarr"
     },
   ]
 }
@@ -119,7 +119,7 @@ module "profilarr" {
   volumes = [
     {
       container_path = "/config"
-      host_path      = "/home/reilley/appdata/profilarr"
+      host_path      = "/home/${var.username}/appdata/profilarr"
     },
   ]
 }

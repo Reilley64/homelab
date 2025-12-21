@@ -38,7 +38,7 @@ module "diun" {
     },
     {
       container_path = "/data"
-      host_path      = "/home/reilley/appdata/diun"
+      host_path      = "/home/${var.username}/appdata/diun"
     },
   ]
 }

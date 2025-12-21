@@ -45,7 +45,7 @@ module "traefik" {
     },
     {
       container_path = "/letsencrypt"
-      host_path      = "/home/reilley/appdata/letsencrypt"
+      host_path      = "/home/${var.username}/appdata/letsencrypt"
     },
   ]
 }

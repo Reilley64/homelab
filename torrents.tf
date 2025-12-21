@@ -43,11 +43,11 @@ module "qbittorrent" {
   volumes = [
     {
       container_path = "/config"
-      host_path      = "/home/reilley/appdata/qbittorrent"
+      host_path      = "/home/${var.username}/appdata/qbittorrent"
     },
     {
       container_path = "/downloads"
-      host_path      = "/home/reilley/downloads"
+      host_path      = "/home/${var.username}/downloads"
     },
     {
       container_path = "/mnt/media"

@@ -64,7 +64,7 @@ module "piper" {
   volumes = [
     {
       container_path = "/data"
-      host_path      = "/home/reilley/appdata/piper"
+      host_path      = "/home/${var.username}/appdata/piper"
     },
   ]
 }
@@ -93,7 +93,7 @@ module "whisper" {
   volumes = [
     {
       container_path = "/data"
-      host_path      = "/home/reilley/appdata/whisper"
+      host_path      = "/home/${var.username}/appdata/whisper"
     },
   ]
 }
