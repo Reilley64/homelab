@@ -24,6 +24,7 @@ module "diun" {
     "DIUN_WATCH_SCHEDULE=0 */6 * * *",
     "DIUN_WATCH_JITTER=30s",
     "DIUN_PROVIDERS_DOCKER=true",
+    "DIUN_NOTIF_DISCORD_WEBHOOKURL=${var.diun_webhook}",
   ])
 
   command = [
