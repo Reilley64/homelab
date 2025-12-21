@@ -3,7 +3,7 @@ locals {
   local_hostname = "${var.name}.localdomain"
 
   base_labels = {
-    "diun.enable" = true
+    "diun.enable"            = true
     "traefik.docker.network" = "traefik"
   }
 
@@ -49,7 +49,7 @@ resource "docker_container" "container" {
   dynamic "capabilities" {
     for_each = length(var.capabilities) > 0 ? [1] : []
     content {
-      add = var.capabilities
+      add  = var.capabilities
       drop = []
     }
   }

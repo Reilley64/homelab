@@ -3,9 +3,11 @@ variable "username" {
 }
 
 variable "password" {
-  type = string
+  type      = string
+  sensitive = true
 }
 
 variable "diun_webhook" {
-  type = string
+  type      = string
+  sensitive = true
 }
