@@ -15,6 +15,10 @@ module "postgres" {
     "POSTGRES_PASSWORD=${var.password}",
   ])
 
+  command = [
+    "postgres",
+  ]
+
   volumes = [
     {
       container_path = "/var/lib/postgresql/data"
