@@ -3,7 +3,7 @@ locals {
   local_hostname = "${var.name}.localdomain"
 
   base_labels = {
-    "duin.enable" = true
+    "diun.enable" = true
     "traefik.docker.network" = "traefik"
   }
 
