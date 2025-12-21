@@ -16,7 +16,7 @@ module "bitwarden" {
   volumes = [
     {
       container_path = "/data"
-      host_path      = "/home/reilley/appdata/bitwarden"
+      host_path      = "/home/${var.username}/appdata/bitwarden"
     },
   ]
 }
