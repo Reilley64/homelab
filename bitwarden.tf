@@ -9,6 +9,10 @@ module "bitwarden" {
 
   env = local.shared_env
 
+  command = [
+    "/start.sh"
+  ]
+
   volumes = [
     {
       container_path = "/data"

@@ -55,6 +55,24 @@ module "radarr" {
   ]
 }
 
+module "prowlarr" {
+  source = "./modules/service"
+
+  name     = "prowlarr"
+  image    = "linuxserver/prowlarr:latest"
+  port     = 9696
+  networks = [docker_network.media.id, docker_network.traefik.id]
+
+  env = local.shared_env
+
+  volumes = [
+    {
+      container_path = "/config"
+      host_path      = "/home/reilley/appdata/prowlarr"
+    },
+  ]
+}
+
 module "profilarr" {
   source = "./modules/service"
 
