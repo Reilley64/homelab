@@ -55,7 +55,6 @@ module "jaeger" {
 
   name     = "jaeger"
   image    = "jaegertracing/jaeger:latest"
-  public   = true
   port     = 16686
   networks = [docker_network.traefik.id]
 
