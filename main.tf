@@ -8,6 +8,11 @@ locals {
   ]
 }
 
+resource "docker_image" "alpine" {
+  name         = "alpine:latest"
+  keep_locally = false
+}
+
 module "gluetun" {
   source = "./modules/service"
 

@@ -32,3 +32,26 @@ module "jellyfin" {
     },
   ]
 }
+
+module "radarr" {
+  source = "./modules/service"
+
+  name     = "radarr"
+  image    = "linuxserver/radarr:latest"
+  public   = true
+  port     = 7878
+  networks = [docker_network.media.id, docker_network.traefik.id]
+
+  env = local.shared_env
+
+  volumes = [
+    {
+      container_path = "/config"
+      host_path      = "/home/reilley/appdata/radarr"
+    },
+    {
+      container_path = "/mnt/media"
+      host_path      = "/mnt/media"
+    },
+  ]
+}
