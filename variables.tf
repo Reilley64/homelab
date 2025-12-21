@@ -5,3 +5,7 @@ variable "username" {
 variable "password" {
   type = string
 }
+
+variable "diun_webhook" {
+  type = string
+}
