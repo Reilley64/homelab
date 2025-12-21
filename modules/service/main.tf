@@ -3,14 +3,8 @@ locals {
   local_hostname = "${var.name}.localdomain"
 
   base_labels = {
+    "duin.enable" = true
     "traefik.docker.network" = "traefik"
-  }
-
-  glance_labels = {
-    "glance.name" = title(var.name)
-    "glance.url"  = "https://${local.hostname}"
-    "glance.icon" = "si:${var.name}"
-    "glance.hide" = "false"
   }
 
   traefik_port_label = var.port != null ? {
@@ -32,7 +26,6 @@ locals {
 
   labels = merge(
     local.base_labels,
-    local.glance_labels,
     local.traefik_port_label,
     local.traefik_public_labels,
     local.traefik_local_labels
