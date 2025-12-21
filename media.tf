@@ -54,3 +54,21 @@ module "radarr" {
     },
   ]
 }
+
+module "profilarr" {
+  source = "./modules/service"
+
+  name     = "profilarr"
+  image    = "santiagosayshey/profilarr:latest"
+  port     = 6868
+  networks = [docker_network.media.id, docker_network.traefik.id]
+
+  env = local.shared_env
+
+  volumes = [
+    {
+      container_path = "/config"
+      host_path      = "/home/reilley/appdata/profilarr"
+    },
+  ]
+}
