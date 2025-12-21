@@ -38,7 +38,6 @@ module "radarr" {
 
   name     = "radarr"
   image    = "linuxserver/radarr:latest"
-  public   = true
   port     = 7878
   networks = [docker_network.media.id, docker_network.traefik.id]
 
