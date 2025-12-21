@@ -7,7 +7,7 @@ module "jellyfin" {
   source = "./modules/service"
 
   name     = "jellyfin"
-  image    = "lscr.io/linuxserver/jellyfin:10.11.5"
+  image    = "linuxserver/jellyfin:10.11.5"
   public   = true
   port     = 8096
   networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
@@ -37,7 +37,7 @@ module "radarr" {
   source = "./modules/service"
 
   name     = "radarr"
-  image    = "lscr.io/linuxserver/radarr:6.0.4"
+  image    = "linuxserver/radarr:6.0.4"
   port     = 7878
   networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
 
@@ -99,7 +99,7 @@ module "flaresolverr" {
   source = "./modules/service"
 
   name     = "flaresolverr"
-  image    = "ghcr.io/flaresolverr/flaresolverr:v3.4.6"
+  image    = "flaresolverr/flaresolverr:v3.4.6"
   port     = 8191
   networks = [docker_network.media.id, docker_network.traefik.id]
 
