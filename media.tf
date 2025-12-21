@@ -10,7 +10,7 @@ module "jellyfin" {
   image    = "linuxserver/jellyfin:latest"
   public   = true
   port     = 8096
-  networks = [docker_network.media.id, docker_network.traefik.id]
+  networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
 
   env = local.shared_env
 
