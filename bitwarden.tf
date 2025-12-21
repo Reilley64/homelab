@@ -2,7 +2,7 @@ module "bitwarden" {
   source = "./modules/service"
 
   name    = "bitwarden"
-  image   = "vaultwarden/server:latest"
+  image   = "vaultwarden/server:1.34.3"
   public  = true
   port    = 80
   networks = [docker_network.traefik.id]

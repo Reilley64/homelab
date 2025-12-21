@@ -1,8 +1,13 @@
+resource "docker_network" "torrents" {
+  name = "torrents"
+  driver = "bridge"
+}
+
 module "gluetun" {
   source = "./modules/service"
 
   name       = "gluetun"
-  image      = "qmcgaw/gluetun:latest"
+  image      = "qmcgaw/gluetun:v3.40.3"
   privileged = true
 
   capabilities = ["CAP_NET_ADMIN"]
@@ -28,7 +33,7 @@ module "qbittorrent" {
   source = "./modules/service"
 
   name    = "qbittorrent"
-  image   = "linuxserver/qbittorrent:latest"
+  image   = "lscr.io/linuxserver/qbittorrent:5.1.4"
   forward = "container:${module.gluetun.id}"
 
   env = concat(local.shared_env, [
