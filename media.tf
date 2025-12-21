@@ -55,6 +55,28 @@ module "radarr" {
   ]
 }
 
+module "sonarr" {
+  source = "./modules/service"
+
+  name     = "sonarr"
+  image    = "linuxserver/sonarr:latest"
+  port     = 8989
+  networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
+
+  env = local.shared_env
+
+  volumes = [
+    {
+      container_path = "/config"
+      host_path      = "/home/reilley/appdata/sonarr"
+    },
+    {
+      container_path = "/mnt/media"
+      host_path      = "/mnt/media"
+    },
+  ]
+}
+
 module "prowlarr" {
   source = "./modules/service"
 
