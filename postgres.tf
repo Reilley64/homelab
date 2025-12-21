@@ -1,5 +1,5 @@
 resource "docker_network" "postgres" {
-  name = "postgres"
+  name   = "postgres"
   driver = "bridge"
 }
 

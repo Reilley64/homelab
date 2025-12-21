@@ -4,9 +4,9 @@ resource "docker_network" "home" {
 }
 
 resource "docker_container" "homeassistant" {
-  image        = docker_image.alpine.image_id
-  name         = "homeassistant"
-  restart      = "unless-stopped"
+  name    = "homeassistant"
+  image   = docker_image.alpine.image_id
+  restart = "unless-stopped"
 
   command = [
     "tail",
@@ -43,9 +43,9 @@ resource "docker_container" "homeassistant" {
 module "piper" {
   source = "./modules/service"
 
-  name    = "piper"
-  image   = "rhasspy/wyoming-piper:2.1.2"
-  port    = 10200
+  name     = "piper"
+  image    = "rhasspy/wyoming-piper:2.1.2"
+  port     = 10200
   networks = [docker_network.home.id]
 
   env = local.shared_env
@@ -72,8 +72,8 @@ module "piper" {
 module "whisper" {
   source = "./modules/service"
 
-  name    = "whisper"
-  image   = "rhasspy/wyoming-whisper:3.0.2"
+  name     = "whisper"
+  image    = "rhasspy/wyoming-whisper:3.0.2"
   networks = [docker_network.home.id]
 
   env = local.shared_env

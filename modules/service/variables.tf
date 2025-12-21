@@ -7,12 +7,12 @@ variable "image" {
 }
 
 variable "capabilities" {
-  type = list(string)
+  type    = list(string)
   default = []
 }
 
 variable "port" {
-  type = number
+  type    = number
   default = null
 }
 
@@ -25,17 +25,17 @@ variable "ports" {
 }
 
 variable "networks" {
-  type = list(string)
+  type    = list(string)
   default = []
 }
 
 variable "forward" {
-  type = string
+  type    = string
   default = null
 }
 
 variable "env" {
-  type = list(string)
+  type    = list(string)
   default = []
 }
 
@@ -50,22 +50,22 @@ variable "devices" {
 variable "volumes" {
   type = list(object({
     container_path = string
-    host_path = string
+    host_path      = string
   }))
   default = []
 }
 
 variable "privileged" {
-  type = bool
+  type    = bool
   default = false
 }
 
 variable "command" {
-  type = list(string)
+  type    = list(string)
   default = []
 }
 
 variable "public" {
-  type = bool
+  type    = bool
   default = false
 }
