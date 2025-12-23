@@ -6,11 +6,12 @@ resource "docker_network" "media" {
 module "jellyfin" {
   source = "./modules/service"
 
-  name     = "jellyfin"
-  image    = "linuxserver/jellyfin:10.11.5"
-  public   = true
-  port     = 8096
-  networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
+  name               = "jellyfin"
+  image              = "linuxserver/jellyfin:10.11.5"
+  public             = true
+  port               = 8096
+  cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
+  networks           = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
 
   env = local.shared_env
 
@@ -82,8 +83,9 @@ module "seerr" {
 
   name     = "seerr"
   image    = "seerr/seerr:sha-3ee6966"
-  public = true
+  public   = true
   port     = 5055
+  cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
   networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
 
   env = local.shared_env
