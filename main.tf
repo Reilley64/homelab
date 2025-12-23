@@ -49,9 +49,7 @@ module "diun" {
 
 data "cloudflare_zone" "reilley_dev" {
   filter = {
-    name = {
-      equal = "reilley.dev"
-    }
+    name = "reilley.dev"
   }
 }
 
