@@ -49,9 +49,7 @@ module "diun" {
 
 data "cloudflare_zone" "reilley_dev" {
   filter = {
-    name = {
-      equal = "example.invalid"
-    }
+    name = "example.invalid"
   }
 }
 
