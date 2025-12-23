@@ -69,3 +69,8 @@ variable "public" {
   type    = bool
   default = false
 }
+
+variable "cloudflare_zone_id" {
+  type    = string
+  default = null
+}

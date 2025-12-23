@@ -95,3 +95,13 @@ resource "docker_container" "container" {
     }
   }
 }
+
+resource "cloudflare_dns_record" "test" {
+  count   = var.public ? 1 : 0
+
+  zone_id = var.cloudflare_zone_id
+  name    = var.name
+  ttl     = 1
+  type    = "CNAME"
+  content = "app.reilley.dev"
+}

@@ -20,8 +20,8 @@ resource "docker_image" "alpine" {
 module "diun" {
   source = "./modules/service"
 
-  name  = "diun"
-  image = "crazymax/diun:4.30.0"
+  name               = "diun"
+  image              = "crazymax/diun:4.30.0"
 
   env = concat(local.shared_env, [
     "DIUN_WATCH_WORKERS=20",
@@ -47,16 +47,20 @@ module "diun" {
   ]
 }
 
+data "http" "myip" {
+  url = "https://ipv4.icanhazip.com"
+}
+
 data "cloudflare_zone" "reilley_dev" {
   filter = {
     name = "reilley.dev"
   }
 }
 
-resource "cloudflare_dns_record" "test" {
+resource "cloudflare_dns_record" "app" {
   zone_id = data.cloudflare_zone.reilley_dev.id
-  name    = "test"
+  name    = "app"
   ttl     = 1
-  type    = "CNAME"
-  content = "app.reilley.dev"
+  type    = "A"
+  content = data.http.myip.response_body
 }
