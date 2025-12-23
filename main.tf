@@ -1,5 +1,9 @@
 provider "docker" {}
 
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
+}
+
 locals {
   shared_env = [
     "TZ=Australia/Melbourne",
@@ -41,4 +45,20 @@ module "diun" {
       host_path      = "/home/${var.username}/appdata/diun"
     },
   ]
+}
+
+data "cloudflare_zone" "reilley_dev" {
+  filter = {
+    name = {
+      equal = "reilley.dev"
+    }
+  }
+}
+
+resource "cloudflare_dns_record" "test" {
+  zone_id = data.cloudflare_zone.reilley_dev.id
+  name    = "test"
+  ttl     = 1
+  type    = "CNAME"
+  content = "app.reilley.dev"
 }

@@ -77,6 +77,25 @@ module "sonarr" {
   ]
 }
 
+module "seerr" {
+  source = "./modules/service"
+
+  name     = "seerr"
+  image    = "seerr/seerr:sha-3ee6966"
+  public = true
+  port     = 5055
+  networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
+
+  env = local.shared_env
+
+  volumes = [
+    {
+      container_path = "/app/config"
+      host_path      = "/home/${var.username}/appdata/seerr"
+    },
+  ]
+}
+
 module "prowlarr" {
   source = "./modules/service"
 
