@@ -44,7 +44,6 @@ module "qbittorrent" {
   name     = "qbittorrent"
   image    = "linuxserver/qbittorrent:5.1.4"
   forward  = "container:${module.gluetun.id}"
-  networks = [docker_network.torrents.id]
 
   env = concat(local.shared_env, [
     "WEBUI_PORT=8080",
