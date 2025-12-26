@@ -9,7 +9,7 @@ module "gluetun" {
   name       = "gluetun"
   image      = "qmcgaw/gluetun:v3.41.0"
   privileged = true
-  # networks   = [docker_network.torrents.id]
+  networks   = [docker_network.torrents.id]
 
   capabilities = ["CAP_NET_ADMIN"]
 
@@ -43,8 +43,8 @@ module "qbittorrent" {
 
   name     = "qbittorrent"
   image    = "linuxserver/qbittorrent:5.1.4"
-  forward  = "service:gluetun"
-  # networks = [docker_network.torrents.id]
+  forward  = "container:${module.gluetun.id}"
+  networks = [docker_network.torrents.id]
 
   env = concat(local.shared_env, [
     "WEBUI_PORT=8080",
