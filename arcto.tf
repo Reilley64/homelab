@@ -22,6 +22,11 @@ resource "docker_container" "authentik_postgres" {
   networks_advanced {
     name = docker_network.arcto.name
   }
+
+  volumes {
+    container_path = "/var/lib/postgresql/data"
+    host_path      = "/home/${var.username}/appdata/arcto/authentik/database"
+  }
 }
 
 resource "docker_image" "authentik" {
@@ -130,6 +135,8 @@ resource "docker_container" "authentik_worker" {
   command = [
     "worker"
   ]
+
+  user = "root"
 
   networks_advanced {
     name = docker_network.arcto.name
