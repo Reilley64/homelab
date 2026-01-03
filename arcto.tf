@@ -47,6 +47,11 @@ resource "docker_container" "container" {
   }
 
   labels {
+    label = "traefik.http.routers.arcto-vaultwarden.tls.certresolver"
+    value = "myresolver"
+  }
+
+  labels {
     label = "traefik.http.routers.arcto-vaultwarden.service"
     value = "arcto-vaultwarden"
   }
