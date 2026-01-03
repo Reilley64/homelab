@@ -38,7 +38,7 @@ resource "docker_container" "container" {
 
   labels {
     label = "traefik.http.routers.arcto-vaultwarden-local.rule"
-    value = "Host(`arctovaultwarden.localdomain`)"
+    value = "Host(`vaultwarden.arcto.localdomain`)"
   }
 
   labels {
