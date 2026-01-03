@@ -125,7 +125,7 @@ resource "docker_container" "authentik_worker" {
   restart = "unless-stopped"
 
   env = concat(local.shared_env, [
-    "AUTHENTIK_POSTGRESQL__HOST=postgresql",
+    "AUTHENTIK_POSTGRESQL__HOST=arcto-authentik-database",
     "AUTHENTIK_POSTGRESQL__NAME=authentik",
     "AUTHENTIK_POSTGRESQL__USER=${var.username}",
     "AUTHENTIK_POSTGRESQL__PASSWORD=${var.password}",
