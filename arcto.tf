@@ -107,6 +107,11 @@ resource "docker_container" "authentik" {
     internal = 9000
     external = 9000
   }
+
+  ports {
+    internal = 9443
+    external = 9443
+  }
 }
 
 resource "docker_container" "authentik_worker" {
