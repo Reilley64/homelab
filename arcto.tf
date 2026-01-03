@@ -102,6 +102,11 @@ resource "docker_container" "authentik" {
     container_path = "/templates"
     host_path      = "/home/${var.username}/appdata/arcto/authentik/templates"
   }
+
+  ports {
+    internal = 9000
+    external = 9000
+  }
 }
 
 resource "docker_container" "authentik_worker" {
