@@ -4,7 +4,7 @@ resource "docker_network" "arcto" {
 }
 
 resource "docker_image" "vaultwarden" {
-  name         = "vaultwarden/server:1.35.1"
+  name         = "vaultwarden/server:testing"
   keep_locally = false
 }
 
