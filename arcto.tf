@@ -70,7 +70,7 @@ resource "docker_container" "authentik" {
 
   labels {
     label = "traefik.http.services.arcto-authentik.loadbalancer.server.port"
-    value = "9443"
+    value = "9000"
   }
 
   labels {
