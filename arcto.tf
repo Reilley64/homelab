@@ -8,17 +8,13 @@ resource "docker_image" "vaultwarden" {
   keep_locally = false
 }
 
-resource "random_password" "admin_token" {
-  length = "48"
-}
-
 resource "docker_container" "container" {
   image   = docker_image.vaultwarden.image_id
   name    = "arcto-vaultwarden"
   restart = "unless-stopped"
 
   env = concat(local.shared_env, [
-    "ADMIN_TOKEN=${random_password.admin_token.result}",
+    "ADMIN_TOKEN=${var.arcto_vaultwarden_admin_token}",
   ])
 
   command = [
