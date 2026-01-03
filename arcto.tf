@@ -63,4 +63,9 @@ resource "docker_container" "container" {
     container_path = "/data"
     host_path      = "/home/${var.username}/appdata/arcto/vaultwarden"
   }
+
+  ports {
+    internal = 80
+    external = 8080
+  }
 }
