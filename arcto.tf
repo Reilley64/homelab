@@ -34,7 +34,8 @@ resource "random_password" "authentik_secret_key" {
 }
 
 output "authentik_secret_key" {
-  value = random_password.authentik_secret_key.result
+  value     = random_password.authentik_secret_key.result
+  sensitive = true
 }
 
 resource "docker_container" "authentik" {
@@ -94,12 +95,12 @@ resource "docker_container" "authentik" {
 
   volumes {
     container_path = "/media"
-    host_path = "/home/${var.username}/appdata/arcto/authentik/media"
+    host_path      = "/home/${var.username}/appdata/arcto/authentik/media"
   }
 
   volumes {
     container_path = "/templates"
-    host_path = "/home/${var.username}/appdata/arcto/authentik/templates"
+    host_path      = "/home/${var.username}/appdata/arcto/authentik/templates"
   }
 }
 
@@ -126,22 +127,22 @@ resource "docker_container" "authentik_worker" {
 
   volumes {
     container_path = "/var/run/docker.sock"
-    host_path = "/var/run/docker.sock"
+    host_path      = "/var/run/docker.sock"
   }
 
   volumes {
     container_path = "/media"
-    host_path = "/home/${var.username}/appdata/arcto/authentik/media"
+    host_path      = "/home/${var.username}/appdata/arcto/authentik/media"
   }
 
   volumes {
     container_path = "/certs"
-    host_path = "/home/${var.username}/appdata/arcto/authentik/certs"
+    host_path      = "/home/${var.username}/appdata/arcto/authentik/certs"
   }
 
   volumes {
     container_path = "/templates"
-    host_path = "/home/${var.username}/appdata/arcto/authentik/templates"
+    host_path      = "/home/${var.username}/appdata/arcto/authentik/templates"
   }
 }
 
