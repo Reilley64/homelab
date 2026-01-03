@@ -37,17 +37,17 @@ resource "docker_container" "container" {
   }
 
   labels {
-    label = "traefik.http.routers.arcto-vaultwarden-local.rule"
-    value = "Host(`vaultwarden.arcto.localdomain`)"
+    label = "traefik.http.routers.arcto-vaultwarden.rule"
+    value = "Host(`vaultwarden.arctopayments.com.au`)"
   }
 
   labels {
-    label = "traefik.http.routers.arcto-vaultwarden-local.entrypoints"
-    value = "web"
+    label = "traefik.http.routers.arcto-vaultwarden.entrypoints"
+    value = "websecure"
   }
 
   labels {
-    label = "traefik.http.routers.arcto-vaultwarden-local.service"
+    label = "traefik.http.routers.arcto-vaultwarden.service"
     value = "arcto-vaultwarden"
   }
 
