@@ -19,6 +19,13 @@ module "postgres" {
     "postgres",
   ]
 
+  ports = [
+    {
+      internal_port = 5437
+      external_port = 5437
+    }
+  ]
+
   volumes = [
     {
       container_path = "/var/lib/postgresql/data"

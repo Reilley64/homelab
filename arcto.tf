@@ -3,13 +3,13 @@ resource "docker_network" "arcto" {
   driver = "bridge"
 }
 
-resource "docker_image" "vaultwarden" {
+resource "docker_image" "arcto_vaultwarden" {
   name         = "vaultwarden/server:testing"
   keep_locally = false
 }
 
 resource "docker_container" "vaultwarden" {
-  image   = docker_image.vaultwarden.image_id
+  image   = docker_image.arcto_vaultwarden.image_id
   name    = "arcto-vaultwarden"
   restart = "unless-stopped"
 
