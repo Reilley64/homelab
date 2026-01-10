@@ -21,8 +21,8 @@ module "postgres" {
 
   ports = [
     {
-      internal_port = 5437
-      external_port = 5437
+      internal_port = 5432
+      external_port = 5432
     }
   ]
 
