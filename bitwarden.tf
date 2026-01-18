@@ -2,7 +2,7 @@ module "bitwarden" {
   source = "./modules/service"
 
   name               = "bitwarden"
-  image              = "vaultwarden/server:1.35.1"
+  image              = "vaultwarden/server:1.35.2"
   public             = true
   port               = 80
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
