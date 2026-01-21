@@ -7,7 +7,7 @@ module "jellyfin" {
   source = "./modules/service"
 
   name               = "jellyfin"
-  image              = "linuxserver/jellyfin:10.11.5"
+  image              = "linuxserver/jellyfin:10.11.6"
   public             = true
   port               = 8096
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
@@ -125,6 +125,28 @@ module "flaresolverr" {
   networks = [docker_network.media.id, docker_network.traefik.id]
 
   env = local.shared_env
+}
+
+module "bazarr" {
+  source = "./modules/service"
+
+  name     = "bazarr"
+  image    = "linuxserver/bazarr:1.5.4"
+  port     = 6767
+  networks = [docker_network.media.id, docker_network.traefik.id]
+
+  env = local.shared_env
+
+  volumes = [
+    {
+      container_path = "/config"
+      host_path      = "/home/${var.username}/appdata/bazarr"
+    },
+    {
+      container_path = "/mnt/media"
+      host_path      = "/mnt/media"
+    },
+  ]
 }
 
 module "profilarr" {
