@@ -5,6 +5,7 @@ resource "docker_network" "immich" {
 
 locals {
   immich_env = [
+    "DB_HOSTNAME=localhost",
     "DB_USERNAME=${var.username}",
     "DB_PASSWORD=${var.password}",
     "DB_DATABASE_NAME=immich",
