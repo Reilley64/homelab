@@ -5,7 +5,7 @@ resource "docker_network" "immich" {
 
 locals {
   immich_env = [
-    "DB_URL=postgresql://${var.username}:${var.password}@postgres:5432/immich",
+    "DB_URL=postgresql://${var.username}:${var.password}@immich_postgres:5432/immich",
     "REDIS_HOSTNAME=immich_redis"
   ]
 }
@@ -15,8 +15,9 @@ module "immich_server" {
 
   name     = "immich_server"
   image    = "ghcr.io/immich-app/immich-server:v2.5.6"
+  public   = true
   port     = 2283
-  networks = [docker_network.immich.id, docker_network.postgres.id, docker_network.traefik.id]
+  networks = [docker_network.immich.id, docker_network.traefik.id]
 
   env = concat(local.shared_env, local.immich_env)
 
@@ -33,14 +34,14 @@ module "immich_machine_learning" {
 
   name     = "immich_machine_learning"
   image    = "ghcr.io/immich-app/immich-machine-learning:v2.5.6-openvino"
-  networks = [docker_network.immich.id, docker_network.postgres.id]
+  networks = [docker_network.immich.id]
 
   env = concat(local.shared_env, local.immich_env)
 
   volumes = [
     {
       container_path = "/data"
-      host_path      = "/home/${var.username}/appdata/whisper"
+      host_path      = "/home/${var.username}/appdata/immich/cache"
     }
   ]
 }
@@ -53,4 +54,25 @@ module "immich_redis" {
   networks = [docker_network.immich.id]
 
   env = local.shared_env
+}
+
+module "immich_postgres" {
+  source = "./modules/service"
+
+  name     = "immich_postgres"
+  image    = "ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0"
+  networks = [docker_network.postgres.id]
+
+  env = concat(local.shared_env, [
+    "POSTGRES_USER=${var.username}",
+    "POSTGRES_PASSWORD=${var.password}",
+    "POSTGRES_DATABASE=immich"
+  ])
+
+  volumes = [
+    {
+      container_path = "/var/lib/postgresql/data"
+      host_path      = "/home/${var.username}/appdata/immich/database"
+    },
+  ]
 }

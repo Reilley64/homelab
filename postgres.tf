@@ -7,7 +7,7 @@ module "postgres" {
   source = "./modules/service"
 
   name     = "postgres"
-  image    = "postgres:14.20"
+  image    = "postgres:14.21"
   networks = [docker_network.postgres.id]
 
   env = concat(local.shared_env, [
