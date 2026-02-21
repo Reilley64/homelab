@@ -38,7 +38,7 @@ module "radarr" {
   source = "./modules/service"
 
   name     = "radarr"
-  image    = "linuxserver/radarr:6.0.4"
+  image    = "linuxserver/radarr:6.0.4.10291"
   port     = 7878
   networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
 
@@ -60,7 +60,7 @@ module "sonarr" {
   source = "./modules/service"
 
   name     = "sonarr"
-  image    = "linuxserver/sonarr:4.0.16"
+  image    = "linuxserver/sonarr:4.0.16.2944"
   port     = 8989
   networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
 
@@ -82,7 +82,7 @@ module "seerr" {
   source = "./modules/service"
 
   name     = "seerr"
-  image    = "seerr/seerr:sha-3ee6966"
+  image    = "seerr/seerr:sha-68f56d2"
   public   = true
   port     = 5055
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
@@ -102,7 +102,7 @@ module "prowlarr" {
   source = "./modules/service"
 
   name     = "prowlarr"
-  image    = "linuxserver/prowlarr:2.3.0"
+  image    = "linuxserver/prowlarr:2.3.0.5236"
   port     = 9696
   networks = [docker_network.media.id, docker_network.traefik.id]
 
@@ -131,7 +131,7 @@ module "bazarr" {
   source = "./modules/service"
 
   name     = "bazarr"
-  image    = "linuxserver/bazarr:1.5.4"
+  image    = "linuxserver/bazarr:1.5.5"
   port     = 6767
   networks = [docker_network.media.id, docker_network.traefik.id]
 
@@ -153,7 +153,7 @@ module "profilarr" {
   source = "./modules/service"
 
   name     = "profilarr"
-  image    = "santiagosayshey/profilarr:v1.1.3"
+  image    = "santiagosayshey/profilarr:v1.1.4"
   port     = 6868
   networks = [docker_network.media.id, docker_network.traefik.id]
 
