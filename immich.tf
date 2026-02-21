@@ -10,10 +10,10 @@ locals {
   ]
 }
 
-module "immich_server" {
+module "immich" {
   source = "./modules/service"
 
-  name     = "immich_server"
+  name     = "immich"
   image    = "ghcr.io/immich-app/immich-server:v2.5.6"
   public   = true
   port     = 2283
