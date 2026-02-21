@@ -62,7 +62,7 @@ module "immich_postgres" {
 
   name     = "immich_postgres"
   image    = "ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0"
-  networks = [docker_network.postgres.id]
+  networks = [docker_network.immich.id]
 
   env = concat(local.shared_env, [
     "POSTGRES_USER=${var.username}",
