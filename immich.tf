@@ -5,8 +5,8 @@ resource "docker_network" "immich" {
 
 locals {
   immich_env = [
-    "DB_URL=postgresql://${var.username}:${var.password}@immich_postgres:5432/immich",
-    "REDIS_HOSTNAME=immich_redis"
+    "DB_URL=postgresql://${var.username}:${var.password}@immich-postgres:5432/immich",
+    "REDIS_HOSTNAME=immich-redis"
   ]
 }
 
@@ -33,7 +33,7 @@ module "immich" {
 module "immich_machine_learning" {
   source = "./modules/service"
 
-  name     = "immich_machine_learning"
+  name     = "immich-machine-learning"
   image    = "ghcr.io/immich-app/immich-machine-learning:v2.5.6-openvino"
   networks = [docker_network.immich.id]
 
@@ -50,7 +50,7 @@ module "immich_machine_learning" {
 module "immich_redis" {
   source = "./modules/service"
 
-  name     = "immich_redis"
+  name     = "immich-redis"
   image    = "valkey/valkey:9"
   networks = [docker_network.immich.id]
 
@@ -60,7 +60,7 @@ module "immich_redis" {
 module "immich_postgres" {
   source = "./modules/service"
 
-  name     = "immich_postgres"
+  name     = "immich-postgres"
   image    = "ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0"
   networks = [docker_network.immich.id]
 
