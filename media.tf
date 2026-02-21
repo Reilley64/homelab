@@ -38,7 +38,7 @@ module "radarr" {
   source = "./modules/service"
 
   name     = "radarr"
-  image    = "linuxserver/radarr:6.0.4.10291"
+  image    = "linuxserver/radarr:version-6.0.4.10291"
   port     = 7878
   networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
 
@@ -60,7 +60,7 @@ module "sonarr" {
   source = "./modules/service"
 
   name     = "sonarr"
-  image    = "linuxserver/sonarr:4.0.16.2944"
+  image    = "linuxserver/sonarr:version-4.0.16.2944"
   port     = 8989
   networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
 
@@ -102,7 +102,7 @@ module "prowlarr" {
   source = "./modules/service"
 
   name     = "prowlarr"
-  image    = "linuxserver/prowlarr:2.3.0.5236"
+  image    = "linuxserver/prowlarr:version-2.3.0.5236"
   port     = 9696
   networks = [docker_network.media.id, docker_network.traefik.id]
 
