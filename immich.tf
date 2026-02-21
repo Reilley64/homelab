@@ -17,6 +17,7 @@ module "immich_server" {
   image    = "ghcr.io/immich-app/immich-server:v2.5.6"
   public   = true
   port     = 2283
+  cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
   networks = [docker_network.immich.id, docker_network.traefik.id]
 
   env = concat(local.shared_env, local.immich_env)
