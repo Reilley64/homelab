@@ -6,6 +6,7 @@ resource "docker_network" "immich" {
 locals {
   immich_env = [
     "DB_URL=postgresql://${var.username}:${var.password}@postgres:5432/immich",
+    "REDIS_URL=redis://immich_redis:6379"
   ]
 }
 
