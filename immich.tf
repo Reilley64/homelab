@@ -19,7 +19,7 @@ module "immich_server" {
   port     = 2283
   networks = [docker_network.immich.id, docker_network.postgres.id, docker_network.traefik.id]
 
-  env = concat(local.shared_env, immich_env)
+  env = concat(local.shared_env, local.immich_env)
 
   volumes = [
     {
@@ -36,7 +36,7 @@ module "immich_machine_learning" {
   image    = "ghcr.io/immich-app/immich-machine-learning:v2.5.6-openvino"
   networks = [docker_network.immich.id, docker_network.postgres.id]
 
-  env = concat(local.shared_env, immich_env)
+  env = concat(local.shared_env, local.immich_env)
 
   volumes = [
     {
