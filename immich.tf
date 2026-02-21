@@ -67,7 +67,7 @@ module "immich_postgres" {
   env = concat(local.shared_env, [
     "POSTGRES_USER=${var.username}",
     "POSTGRES_PASSWORD=${var.password}",
-    "POSTGRES_DATABASE=immich"
+    "POSTGRES_DB=immich"
   ])
 
   volumes = [
