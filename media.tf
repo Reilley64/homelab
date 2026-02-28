@@ -82,7 +82,7 @@ module "seerr" {
   source = "./modules/service"
 
   name     = "seerr"
-  image    = "seerr/seerr:sha-68f56d2"
+  image    = "seerr/seerr:v3.1.0"
   public   = true
   port     = 5055
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
