@@ -7,7 +7,7 @@ module "gluetun" {
   source = "./modules/service"
 
   name       = "gluetun"
-  image      = "qmcgaw/gluetun:v3.41.0"
+  image      = "qmcgaw/gluetun:v3.41.1"
   privileged = true
   networks   = [docker_network.torrents.id]
 
