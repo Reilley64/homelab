@@ -7,7 +7,7 @@ module "jellyfin" {
   source = "./modules/service"
 
   name               = "jellyfin"
-  image              = "linuxserver/jellyfin:10.11.6"
+  image              = "linuxserver/jellyfin:version-10.11.6ubu2404"
   public             = true
   port               = 8096
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
@@ -60,7 +60,7 @@ module "sonarr" {
   source = "./modules/service"
 
   name     = "sonarr"
-  image    = "linuxserver/sonarr:version-4.0.16.2944"
+  image    = "linuxserver/sonarr:version-4.0.17.2952"
   port     = 8989
   networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
 
@@ -131,7 +131,7 @@ module "bazarr" {
   source = "./modules/service"
 
   name     = "bazarr"
-  image    = "linuxserver/bazarr:1.5.5"
+  image    = "linuxserver/bazarr:version-v1.5.6"
   port     = 6767
   networks = [docker_network.media.id, docker_network.traefik.id]
 
