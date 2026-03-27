@@ -7,7 +7,7 @@ module "jellyfin" {
   source = "./modules/service"
 
   name               = "jellyfin"
-  image              = "linuxserver/jellyfin:version-10.11.6ubu2404"
+  image              = "linuxserver/jellyfin:version-10.11.6ubu2404-ls24"
   public             = true
   port               = 8096
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
@@ -163,6 +163,33 @@ module "profilarr" {
     {
       container_path = "/config"
       host_path      = "/home/${var.username}/appdata/profilarr"
+    },
+  ]
+}
+
+module "unpackerr" {
+  source = "./modules/service"
+
+  name = "unpackerr"
+  image = "golift/unpackerr:0.15.2"
+  networks = [docker_network.media.id]
+
+  env = concat(local.shared_env, [
+    "UN_LOG_FILE=/logs/unpackerr.log",
+    "UN_SONARR_0_URL=http://sonarr.localdomain",
+    "UN_SONARR_0_API_KEY=${var.sonarr_api_key}",
+    "UN_RADARR_0_URL=http://radarr.localdomain",
+    "UN_RADARR_0_API_KEY=${var.radarr_api_key}",
+  ])
+
+  volumes = [
+    {
+      container_path = "/logs"
+      host_path      = "/home/${var.username}/appdata/unpackerr"
+    },
+    {
+      container_path = "/mnt/media"
+      host_path      = "/mnt/media"
     },
   ]
 }

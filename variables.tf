@@ -21,3 +21,13 @@ variable "arcto_vaultwarden_admin_token" {
   type      = string
   sensitive = true
 }
+
+variable "radarr_api_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "sonarr_api_key" {
+  type      = string
+  sensitive = true
+}
