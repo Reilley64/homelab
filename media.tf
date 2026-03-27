@@ -7,7 +7,7 @@ module "jellyfin" {
   source = "./modules/service"
 
   name               = "jellyfin"
-  image              = "linuxserver/jellyfin:version-10.11.6ubu2404-ls24"
+  image              = "linuxserver/jellyfin:version-10.11.6ubu2404"
   public             = true
   port               = 8096
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
