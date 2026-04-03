@@ -51,14 +51,3 @@ module "traefik" {
     },
   ]
 }
-
-module "jaeger" {
-  source = "./modules/service"
-
-  name     = "jaeger"
-  image    = "jaegertracing/jaeger:2.17.0"
-  port     = 16686
-  networks = [docker_network.traefik.id]
-
-  env = local.shared_env
-}
