@@ -1,3 +1,19 @@
+// Metrics
+prometheus.scrape "jellyfin" {
+  targets = [{
+    __address__ = "jellyfin:8096",
+  }]
+  metrics_path = "/metrics"
+  forward_to   = [prometheus.remote_write.default.receiver]
+}
+
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}
+
+// Logs
 discovery.docker "linux" {
   host = "unix:///var/run/docker.sock"
 }

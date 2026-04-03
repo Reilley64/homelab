@@ -26,6 +26,28 @@ module "alloy" {
   ]
 }
 
+module "prometheus" {
+  source = "./modules/service"
+
+  name     = "prometheus"
+  image    = "prom/prometheus:latest"
+  networks = [docker_network.traefik.id]
+
+  env = local.shared_env
+
+  command = [
+    "--web.enable-remote-write-receiver",
+    "--storage.tsdb.retention.time=30d",
+  ]
+
+  volumes = [
+    {
+      host_path      = "/home/${var.username}/appdata/prometheus"
+      container_path = "/prometheus"
+    },
+  ]
+}
+
 module "loki" {
   source = "./modules/service"
 
