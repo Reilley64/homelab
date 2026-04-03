@@ -130,6 +130,12 @@ module "flaresolverr" {
   networks = [docker_network.media.id, docker_network.traefik.id]
 
   env = local.shared_env
+
+  command = [
+    "/usr/local/bin/python",
+    "-u",
+    "/app/flaresolverr.py",
+  ]
 }
 
 module "bazarr" {
@@ -169,6 +175,15 @@ module "profilarr" {
       container_path = "/config"
       host_path      = "/home/${var.username}/appdata/profilarr"
     },
+  ]
+
+  command = [
+    "gunicorn",
+    "--bind",
+    "0.0.0.0:6868",
+    "--timeout",
+    "600",
+    "app.main:create_app()",
   ]
 }
 

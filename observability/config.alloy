@@ -18,6 +18,10 @@ loki.source.docker "default" {
   forward_to = [loki.process.docker_logs.receiver]
 }
 
+loki.process "docker_logs" {
+  forward_to = [loki.write.default.receiver]
+}
+
 loki.write "default" {
   endpoint {
     url = "http://loki:3100/loki/api/v1/push"
