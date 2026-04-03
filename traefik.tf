@@ -20,6 +20,7 @@ module "traefik" {
     "--certificatesresolvers.myresolver.acme.tlschallenge=true",
     "--certificatesresolvers.myresolver.acme.email=reilleygray@gmail.com",
     "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json",
+    "--tracing.otlp.grpc=true",
     "--tracing.otlp.grpc.endpoint=jaeger:4317",
   ]
 
