@@ -22,6 +22,7 @@ module "traefik" {
     "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json",
     "--tracing.otlp.grpc=true",
     "--tracing.otlp.grpc.endpoint=jaeger:4317",
+    "--tracing.otlp.grpc.insecure=true",
   ]
 
   ports = [
