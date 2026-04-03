@@ -96,6 +96,11 @@ module "seerr" {
       host_path      = "/home/${var.username}/appdata/seerr"
     },
   ]
+
+  command = [
+    "npm",
+    "start",
+  ]
 }
 
 module "prowlarr" {

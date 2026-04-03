@@ -2,6 +2,15 @@ discovery.docker "linux" {
   host = "unix:///var/run/docker.sock"
 }
 
+discovery.relabel "logs_integrations_docker" {
+  targets = []
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    target_label  = "container"
+  }
+}
+
 loki.source.docker "default" {
   host       = "unix:///var/run/docker.sock"
   targets    = discovery.docker.linux.targets

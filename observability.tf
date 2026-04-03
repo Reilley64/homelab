@@ -1,7 +1,7 @@
 module "alloy" {
   source = "./modules/service"
 
-  name     = "jaeger"
+  name     = "alloy"
   image    = "grafana/alloy:v1.15.0"
   networks = [docker_network.traefik.id]
 
