@@ -36,6 +36,7 @@ module "prometheus" {
   env = local.shared_env
 
   command = [
+    "--config.file=/etc/prometheus/prometheus.yaml",
     "--web.enable-remote-write-receiver",
     "--storage.tsdb.retention.time=30d",
   ]
@@ -44,6 +45,10 @@ module "prometheus" {
     {
       host_path      = "/home/${var.username}/appdata/prometheus"
       container_path = "/prometheus"
+    },
+    {
+      host_path      = "/home/${var.username}/homelab/observability/prometheus.yaml"
+      container_path = "/etc/prometheus/prometheus.yaml"
     },
   ]
 }
