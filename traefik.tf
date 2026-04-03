@@ -7,7 +7,7 @@ module "traefik" {
   source = "./modules/service"
 
   name     = "traefik"
-  image    = "traefik:v3.6.7"
+  image    = "traefik:v3.6.12"
   networks = [docker_network.traefik.id]
 
   env = local.shared_env
@@ -20,7 +20,7 @@ module "traefik" {
     "--certificatesresolvers.myresolver.acme.tlschallenge=true",
     "--certificatesresolvers.myresolver.acme.email=reilleygray@gmail.com",
     "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json",
-    "--tracing.otlp.grpc=jaeger:4317",
+    "--tracing.otlp.grpc.endpoint=jaeger:4317",
   ]
 
   ports = [
@@ -54,7 +54,7 @@ module "jaeger" {
   source = "./modules/service"
 
   name     = "jaeger"
-  image    = "jaegertracing/jaeger:2.13.0"
+  image    = "jaegertracing/jaeger:2.17.0"
   port     = 16686
   networks = [docker_network.traefik.id]
 

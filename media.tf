@@ -7,7 +7,7 @@ module "jellyfin" {
   source = "./modules/service"
 
   name               = "jellyfin"
-  image              = "linuxserver/jellyfin:version-10.11.6ubu2404"
+  image              = "linuxserver/jellyfin:version-10.11.7ubu2404"
   public             = true
   port               = 8096
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
@@ -38,7 +38,7 @@ module "radarr" {
   source = "./modules/service"
 
   name     = "radarr"
-  image    = "linuxserver/radarr:version-6.0.4.10291"
+  image    = "linuxserver/radarr:version-6.1.1.10360"
   port     = 7878
   networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
 
