@@ -7,7 +7,7 @@ module "traefik" {
   source = "./modules/service"
 
   name     = "traefik"
-  image    = "traefik:v3.6.12"
+  image    = "traefik:v3.6.13"
   networks = [docker_network.traefik.id]
 
   env = local.shared_env
