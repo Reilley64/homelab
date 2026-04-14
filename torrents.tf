@@ -58,5 +58,9 @@ module "qbittorrent" {
       container_path = "/downloads"
       host_path      = "/home/${var.username}/downloads"
     },
+    {
+      container_path = "/mnt/media"
+      host_path      = "/mnt/media"
+    },
   ]
 }
