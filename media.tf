@@ -53,6 +53,10 @@ module "radarr" {
       container_path = "/mnt/media"
       host_path      = "/mnt/media"
     },
+    {
+      container_path = "/downloads"
+      host_path      = "/home/${var.username}/downloads"
+    },
   ]
 }
 
@@ -74,6 +78,10 @@ module "sonarr" {
     {
       container_path = "/mnt/media"
       host_path      = "/mnt/media"
+    },
+    {
+      container_path = "/downloads"
+      host_path      = "/home/${var.username}/downloads"
     },
   ]
 }
