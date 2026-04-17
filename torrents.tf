@@ -62,5 +62,9 @@ module "qbittorrent" {
       container_path = "/mnt/media"
       host_path      = "/mnt/media"
     },
+    {
+      container_path = "/mnt/roms"
+      host_path      = "/mnt/roms"
+    },
   ]
 }
