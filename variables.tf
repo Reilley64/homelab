@@ -31,3 +31,8 @@ variable "sonarr_api_key" {
   type      = string
   sensitive = true
 }
+
+variable "wireguard_private_key" {
+  type      = string
+  sensitive = true
+}

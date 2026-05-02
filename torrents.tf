@@ -16,7 +16,7 @@ module "gluetun" {
   env = concat(local.shared_env, [
     "VPN_SERVICE_PROVIDER=protonvpn",
     "VPN_TYPE=wireguard",
-    "WIREGUARD_PRIVATE_KEY=SKfx08T9jVPuQPDuNBL3n5l9iXR5dSw+7R5zvSCLVU0=",
+    "WIREGUARD_PRIVATE_KEY=${var.wireguard_private_key}",
     "PORT_FORWARD_ONLY=on",
     "VPN_PORT_FORWARDING=on",
     "VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'wget -O- --retry-connrefused --post-data \"json={\\\"listen_port\\\":{{PORT}},\\\"current_network_interface\\\":\\\"{{VPN_INTERFACE}}\\\",\\\"random_port\\\":false,\\\"upnp\\\":false}\" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'",

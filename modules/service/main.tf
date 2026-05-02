@@ -96,7 +96,7 @@ resource "docker_container" "container" {
   }
 }
 
-resource "cloudflare_dns_record" "test" {
+resource "cloudflare_dns_record" "dns" {
   count   = var.public ? 1 : 0
 
   zone_id = var.cloudflare_zone_id
