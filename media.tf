@@ -172,7 +172,7 @@ module "profilarr" {
   source = "./modules/service"
 
   name     = "profilarr"
-  image    = "santiagosayshey/profilarr:v1.1.4"
+  image    = "ghcr.io/dictionarry-hub/profilarr:2.0.0"
   port     = 6868
   networks = [docker_network.media.id, docker_network.traefik.id]
 
@@ -183,15 +183,6 @@ module "profilarr" {
       container_path = "/config"
       host_path      = "/home/${var.username}/appdata/profilarr"
     },
-  ]
-
-  command = [
-    "gunicorn",
-    "--bind",
-    "0.0.0.0:6868",
-    "--timeout",
-    "600",
-    "app.main:create_app()",
   ]
 }
 
