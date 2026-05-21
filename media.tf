@@ -115,7 +115,7 @@ module "prowlarr" {
   source = "./modules/service"
 
   name     = "prowlarr"
-  image    = "linuxserver/prowlarr:version-2.3.0.5236"
+  image    = "linuxserver/prowlarr:version-2.3.5.5327"
   port     = 9696
   networks = [docker_network.media.id, docker_network.traefik.id]
 
