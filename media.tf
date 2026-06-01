@@ -89,12 +89,12 @@ module "sonarr" {
 module "seerr" {
   source = "./modules/service"
 
-  name     = "seerr"
-  image    = "seerr/seerr:v3.1.1"
-  public   = true
-  port     = 5055
+  name               = "seerr"
+  image              = "seerr/seerr:v3.2.0"
+  public             = true
+  port               = 5055
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
-  networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
+  networks           = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
 
   env = local.shared_env
 
@@ -172,11 +172,13 @@ module "profilarr" {
   source = "./modules/service"
 
   name     = "profilarr"
-  image    = "ghcr.io/dictionarry-hub/profilarr:2.0.0"
+  image    = "ghcr.io/dictionarry-hub/profilarr:2.0.7"
   port     = 6868
   networks = [docker_network.media.id, docker_network.traefik.id]
 
-  env = local.shared_env
+  env = concat(local.shared_env, [
+    "AUTH=off",
+  ])
 
   volumes = [
     {
@@ -189,8 +191,8 @@ module "profilarr" {
 module "unpackerr" {
   source = "./modules/service"
 
-  name = "unpackerr"
-  image = "golift/unpackerr:0.15.2"
+  name     = "unpackerr"
+  image    = "golift/unpackerr:0.15.2"
   networks = [docker_network.media.id]
 
   env = concat(local.shared_env, [

@@ -13,14 +13,16 @@ locals {
 module "immich" {
   source = "./modules/service"
 
-  name     = "immich"
-  image    = "ghcr.io/immich-app/immich-server:v2.5.6"
-  public   = true
-  port     = 2283
+  name               = "immich"
+  image              = "ghcr.io/immich-app/immich-server:v2.5.6"
+  public             = true
+  port               = 2283
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
-  networks = [docker_network.immich.id, docker_network.traefik.id]
+  networks           = [docker_network.immich.id, docker_network.traefik.id]
 
   env = concat(local.shared_env, local.immich_env)
+
+  command = ["start.sh"]
 
   volumes = [
     {
@@ -39,6 +41,8 @@ module "immich_machine_learning" {
 
   env = concat(local.shared_env, local.immich_env)
 
+  command = ["python", "-m", "immich_ml"]
+
   volumes = [
     {
       container_path = "/data"
@@ -55,6 +59,8 @@ module "immich_redis" {
   networks = [docker_network.immich.id]
 
   env = local.shared_env
+
+  command = ["valkey-server"]
 }
 
 module "immich_postgres" {
@@ -69,6 +75,8 @@ module "immich_postgres" {
     "POSTGRES_PASSWORD=${var.password}",
     "POSTGRES_DB=immich"
   ])
+
+  command = ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
 
   volumes = [
     {

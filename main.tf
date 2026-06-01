@@ -20,8 +20,8 @@ resource "docker_image" "alpine" {
 module "diun" {
   source = "./modules/service"
 
-  name               = "diun"
-  image              = "crazymax/diun:4.30.0"
+  name  = "diun"
+  image = "crazymax/diun:4.30.0"
 
   env = concat(local.shared_env, [
     "DIUN_WATCH_WORKERS=20",
