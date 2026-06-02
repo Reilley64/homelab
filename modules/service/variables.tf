@@ -74,3 +74,8 @@ variable "cloudflare_zone_id" {
   type    = string
   default = null
 }
+
+variable "user" {
+  type = string
+  default = null
+}

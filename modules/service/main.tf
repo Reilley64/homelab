@@ -44,6 +44,7 @@ resource "docker_container" "container" {
   privileged   = var.privileged
   network_mode = var.forward
   env          = var.env
+  user         = var.user
   command      = var.command
 
   dynamic "capabilities" {
@@ -97,7 +98,7 @@ resource "docker_container" "container" {
 }
 
 resource "cloudflare_dns_record" "dns" {
-  count   = var.public ? 1 : 0
+  count = var.public ? 1 : 0
 
   zone_id = var.cloudflare_zone_id
   name    = var.name

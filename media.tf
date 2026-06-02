@@ -224,6 +224,7 @@ module "maintainerr" {
   networks = [docker_network.media.id, docker_network.traefik.id]
 
   env = local.shared_env
+  user = "1000:1000"
 
   volumes = [
     {
