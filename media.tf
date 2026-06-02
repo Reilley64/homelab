@@ -214,3 +214,21 @@ module "unpackerr" {
     },
   ]
 }
+
+module "maintainerr" {
+  source = "./modules/service"
+
+  name     = "maintainerr"
+  image    = "maintainerr/maintainerr:3.13.0"
+  port     = 6246
+  networks = [docker_network.media.id, docker_network.traefik.id]
+
+  env = local.shared_env
+
+  volumes = [
+    {
+      container_path = "/opt/data"
+      host_path      = "/home/${var.username}/appdata/maintainerr"
+    },
+  ]
+}
