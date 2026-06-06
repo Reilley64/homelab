@@ -29,7 +29,7 @@ module "jellyfin" {
     },
     {
       container_path = "/mnt/media"
-      host_path      = "/mnt/media"
+      host_path      = module.media.target
     },
   ]
 }
@@ -51,7 +51,7 @@ module "radarr" {
     },
     {
       container_path = "/mnt/media"
-      host_path      = "/mnt/media"
+      host_path      = module.media.target
     },
     {
       container_path = "/downloads"
@@ -77,7 +77,7 @@ module "sonarr" {
     },
     {
       container_path = "/mnt/media"
-      host_path      = "/mnt/media"
+      host_path      = module.media.target
     },
     {
       container_path = "/downloads"
@@ -163,7 +163,7 @@ module "bazarr" {
     },
     {
       container_path = "/mnt/media"
-      host_path      = "/mnt/media"
+      host_path      = module.media.target
     },
   ]
 }
@@ -210,7 +210,7 @@ module "unpackerr" {
     },
     {
       container_path = "/mnt/media"
-      host_path      = "/mnt/media"
+      host_path      = module.media.target
     },
   ]
 }
@@ -224,7 +224,7 @@ module "maintainerr" {
   networks = [docker_network.media.id, docker_network.traefik.id]
 
   env = local.shared_env
-  user = "1000:1000"
+  user = "${var.uid}:${var.gid}"
 
   volumes = [
     {

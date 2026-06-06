@@ -1,3 +1,11 @@
+variable "uid" {
+  type = string
+}
+
+variable "gid" {
+  type = string
+}
+
 variable "username" {
   type = string
 }

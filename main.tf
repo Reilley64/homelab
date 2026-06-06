@@ -1,4 +1,6 @@
-provider "docker" {}
+provider "docker" {
+  host = "ssh://${var.username}@192.168.86.199"
+}
 
 provider "cloudflare" {
   api_token = var.cloudflare_api_token
@@ -7,8 +9,8 @@ provider "cloudflare" {
 locals {
   shared_env = [
     "TZ=Australia/Melbourne",
-    "PGID=1000",
-    "PUID=1000",
+    "PGID=${var.gid}",
+    "PUID=${var.uid}",
   ]
 }
 
