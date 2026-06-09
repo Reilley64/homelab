@@ -7,7 +7,7 @@ module "gluetun" {
   source = "./modules/service"
 
   name       = "gluetun"
-  image      = "qmcgaw/gluetun:v3.41.1"
+  image      = "qmcgaw/gluetun:latest"
   privileged = true
   networks   = [docker_network.torrents.id]
 
@@ -42,7 +42,7 @@ module "qbittorrent" {
   source = "./modules/service"
 
   name    = "qbittorrent"
-  image   = "linuxserver/qbittorrent:version-5.1.4-r3"
+  image   = "linuxserver/qbittorrent:5.2.1"
   forward = "container:${module.gluetun.id}"
 
   env = concat(local.shared_env, [
