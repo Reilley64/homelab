@@ -32,9 +32,14 @@ locals {
   )
 }
 
+data "docker_registry_image" "image" {
+  name = var.image
+}
+
 resource "docker_image" "image" {
-  name         = var.image
-  keep_locally = false
+  name          = data.docker_registry_image.image.name
+  pull_triggers = [data.docker_registry_image.image.sha256_digest]
+  keep_locally  = false
 }
 
 resource "docker_container" "container" {
