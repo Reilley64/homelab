@@ -42,7 +42,7 @@ module "qbittorrent" {
   source = "./modules/service"
 
   name    = "qbittorrent"
-  image   = "linuxserver/qbittorrent:5.2.1"
+  image   = "linuxserver/qbittorrent:5.2.3"
   forward = "container:${module.gluetun.id}"
 
   env = concat(local.shared_env, [
