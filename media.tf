@@ -35,7 +35,8 @@ module "jellyfin" {
 }
 
 module "radarr" {
-  source = "./modules/service"
+  source     = "./modules/service"
+  depends_on = [module.postgres]
 
   name     = "radarr"
   image    = "linuxserver/radarr:latest"
@@ -61,7 +62,8 @@ module "radarr" {
 }
 
 module "sonarr" {
-  source = "./modules/service"
+  source     = "./modules/service"
+  depends_on = [module.postgres]
 
   name     = "sonarr"
   image    = "linuxserver/sonarr:latest"

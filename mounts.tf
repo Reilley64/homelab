@@ -1,16 +1,3 @@
-module "magic" {
-  source = "./modules/mount"
-
-  name        = "mnt-magic"
-  description = "Magic"
-  remote      = "//192.168.86.132/Magic"
-  target      = "/mnt/magic"
-  uid         = var.uid
-  gid         = var.gid
-  username    = var.username
-  password    = var.password
-}
-
 module "media" {
   source = "./modules/mount"
 
