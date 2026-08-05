@@ -104,6 +104,16 @@ variable "volumes" {
   type = list(object({
     container_path = string
     host_path      = string
+    read_only      = optional(bool, false)
   }))
   default = []
+}
+
+variable "uploads" {
+  type = list(object({
+    file    = string
+    content = string
+  }))
+  default     = []
+  description = "Files written into the container between create and start, so config can live in this repo instead of on the host. Changing content replaces the container."
 }

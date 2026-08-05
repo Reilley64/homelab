@@ -102,7 +102,15 @@ resource "docker_container" "container" {
     content {
       container_path = volumes.value.container_path
       host_path      = volumes.value.host_path
-      read_only      = false
+      read_only      = volumes.value.read_only
+    }
+  }
+
+  dynamic "upload" {
+    for_each = var.uploads
+    content {
+      file    = upload.value.file
+      content = upload.value.content
     }
   }
 }
