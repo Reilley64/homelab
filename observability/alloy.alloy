@@ -34,6 +34,13 @@ loki.process "jellyfin" {
     format = "2006-01-02 15:04:05.000 -07:00"
   }
 
+  // Serilog writes INF/WRN/ERR; Grafana only colours the full names, and shows
+  // anything else as UNK.
+  stage.template {
+    source   = "level"
+    template = "{{ if eq .Value \"INF\" }}info{{ else if eq .Value \"WRN\" }}warn{{ else if eq .Value \"ERR\" }}error{{ else if eq .Value \"DBG\" }}debug{{ else if eq .Value \"FTL\" }}critical{{ else if eq .Value \"TRC\" }}trace{{ else }}{{ .Value }}{{ end }}"
+  }
+
   stage.labels {
     values = {
       level = "level",
