@@ -76,6 +76,10 @@ module "whisper" {
   image    = "rhasspy/wyoming-whisper:3.0.2"
   networks = [docker_network.home.id]
 
+  # ponytail: Wyoming is not HTTP, so no Traefik route — but Home Assistant
+  # still needs the name to reach the published port directly.
+  local_dns = true
+
   ports = [
     {
       internal_port = 10300

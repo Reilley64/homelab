@@ -109,6 +109,12 @@ variable "volumes" {
   default = []
 }
 
+variable "local_dns" {
+  type        = bool
+  default     = false
+  description = "Force a {name}.localdomain record for a service reached directly on a published port rather than through Traefik."
+}
+
 variable "host_ip" {
   type        = string
   default     = "192.168.86.199"
