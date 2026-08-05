@@ -30,6 +30,8 @@ module "traefik" {
   command = [
     "--api.insecure=true",
     "--providers.docker=true",
+    "--metrics.prometheus=true",
+    "--metrics.prometheus.addRoutersLabels=true",
     "--entrypoints.web.address=:80",
     "--entrypoints.websecure.address=:443",
     "--certificatesresolvers.myresolver.acme.tlschallenge=true",
