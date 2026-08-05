@@ -23,8 +23,9 @@ loki.process "jellyfin" {
     firstline = "^\\[\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"
   }
 
+  // (?s) so the message group swallows the newlines of a joined stack trace.
   stage.regex {
-    expression = "^\\[(?P<ts>[^\\]]+)\\] \\[(?P<level>\\w+)\\]"
+    expression = "(?s)^\\[(?P<ts>[^\\]]+)\\] \\[(?P<level>\\w+)\\] (?P<message>.*)"
   }
 
   // Take Jellyfin's timestamp, not ingest time, so a replayed file lands on the
@@ -45,6 +46,12 @@ loki.process "jellyfin" {
     values = {
       level = "level",
     }
+  }
+
+  // Grafana renders the timestamp and level in their own columns. A line that
+  // didn't match the regex is left whole.
+  stage.output {
+    source = "message"
   }
 }
 
