@@ -113,3 +113,11 @@ resource "grafana_folder" "homelab" {
 
   title = "Homelab"
 }
+
+resource "grafana_dashboard" "jellyfin" {
+  folder = grafana_folder.homelab.uid
+
+  config_json = templatefile("${path.module}/observability/jellyfin-dashboard.json.tftpl", {
+    datasource_uid = grafana_data_source.prometheus.uid
+  })
+}
