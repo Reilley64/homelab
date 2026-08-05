@@ -15,7 +15,7 @@ variable "password" {
   sensitive = true
 }
 
-variable "diun_webhook" {
+variable "discord_webhook" {
   type      = string
   sensitive = true
 }
