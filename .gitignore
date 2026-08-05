@@ -1,7 +1,8 @@
 .terraform
 .idea
 *.tfstate
-*.tfstate.backup
+*.backup
 *.tfvars
 .terraform.lock.hcl
+.grafana-token
 docs
