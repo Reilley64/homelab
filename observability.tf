@@ -121,3 +121,87 @@ resource "grafana_dashboard" "jellyfin" {
     datasource_uid = grafana_data_source.prometheus.uid
   })
 }
+
+resource "grafana_contact_point" "discord" {
+  depends_on = [time_sleep.grafana_ready]
+
+  name = "Discord"
+
+  discord {
+    url     = var.discord_webhook
+    title   = "{{ .CommonLabels.alertname }}"
+    message = "{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}"
+  }
+}
+
+resource "grafana_rule_group" "host_disk" {
+  name             = "Host disk"
+  folder_uid       = grafana_folder.homelab.uid
+  interval_seconds = 300
+
+  rule {
+    name           = "Gentoo box low disk space"
+    condition      = "B"
+    for            = "15m"
+    no_data_state  = "NoData"
+    exec_err_state = "Alerting"
+
+    annotations = {
+      summary = "192.168.86.199 has less than 104 GiB free on /"
+    }
+
+    labels = {
+      severity = "warning"
+    }
+
+    data {
+      ref_id         = "A"
+      datasource_uid = grafana_data_source.prometheus.uid
+
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+
+      model = jsonencode({
+        refId         = "A"
+        expr          = "node_filesystem_avail_bytes{mountpoint=\"/\"}"
+        instant       = true
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    data {
+      ref_id         = "B"
+      datasource_uid = "-100"
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+
+      model = jsonencode({
+        refId = "B"
+        type  = "classic_conditions"
+        datasource = {
+          type = "__expr__"
+          uid  = "-100"
+        }
+        conditions = [{
+          evaluator = { type = "lt", params = [111669149696] }
+          operator  = { type = "and" }
+          query     = { params = ["A"] }
+          reducer   = { type = "last", params = [] }
+          type      = "query"
+        }]
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    notification_settings {
+      contact_point = grafana_contact_point.discord.name
+    }
+  }
+}
