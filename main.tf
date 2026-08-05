@@ -64,6 +64,6 @@ resource "cloudflare_dns_record" "app" {
   name    = "app"
   ttl     = 1
   type    = "A"
-  content = data.http.myip.response_body
+  content = chomp(data.http.myip.response_body)
   comment = "managed by terraform"
 }
