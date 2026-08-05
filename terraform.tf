@@ -29,5 +29,10 @@ terraform {
       source  = "hashicorp/time"
       version = "~> 0.13"
     }
+
+    unifi = {
+      source  = "ubiquiti-community/unifi"
+      version = "~> 0.55"
+    }
   }
 }

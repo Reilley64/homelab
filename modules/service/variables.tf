@@ -109,6 +109,12 @@ variable "volumes" {
   default = []
 }
 
+variable "host_ip" {
+  type        = string
+  default     = "192.168.86.199"
+  description = "Address the {name}.localdomain A record resolves to. Every service is fronted by Traefik on this host."
+}
+
 variable "uploads" {
   type = list(object({
     file    = string

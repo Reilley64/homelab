@@ -11,6 +11,14 @@ provider "grafana" {
   auth = "admin:${var.password}"
 }
 
+provider "unifi" {
+  api_url = "https://192.168.86.1"
+  api_key = var.unifi_api_key
+
+  # ponytail: the controller serves its own self-signed cert
+  allow_insecure = true
+}
+
 locals {
   shared_env = [
     "TZ=Australia/Melbourne",

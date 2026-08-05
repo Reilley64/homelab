@@ -125,3 +125,11 @@ resource "cloudflare_dns_record" "dns" {
   content = "app.example.invalid"
   comment = "managed by terraform"
 }
+
+resource "unifi_dns_record" "local" {
+  count = length(local.traefik_local_labels) > 0 ? 1 : 0
+
+  name        = local.local_hostname
+  record_type = "A"
+  value       = var.host_ip
+}

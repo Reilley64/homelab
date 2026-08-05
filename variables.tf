@@ -25,6 +25,11 @@ variable "cloudflare_api_token" {
   sensitive = true
 }
 
+variable "unifi_api_key" {
+  type      = string
+  sensitive = true
+}
+
 variable "arcto_vaultwarden_admin_token" {
   type      = string
   sensitive = true
