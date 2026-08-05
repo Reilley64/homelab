@@ -8,10 +8,16 @@ module "gluetun" {
 
   name       = "gluetun"
   image      = "qmcgaw/gluetun:latest"
-  privileged = true
+  route_name = "qbittorrent"
+  url        = "http://192.168.86.199:8080"
   networks   = [docker_network.torrents.id]
 
-  capabilities = ["CAP_NET_ADMIN"]
+  ports = [
+    {
+      internal_port = 8080
+      external_port = 8080
+    },
+  ]
 
   env = concat(local.shared_env, [
     "VPN_SERVICE_PROVIDER=protonvpn",
@@ -23,17 +29,13 @@ module "gluetun" {
     "VPN_PORT_FORWARDING_DOWN_COMMAND=/bin/sh -c 'wget -O- --retry-connrefused --post-data \"json={\\\"listen_port\\\":0,\\\"current_network_interface\\\":\\\"lo\\\"}\" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'",
   ])
 
+  privileged   = true
+  capabilities = ["CAP_NET_ADMIN"]
+
   devices = [
     {
       container_path = "/dev/net/tun"
       host_path      = "/dev/net/tun"
-    },
-  ]
-
-  ports = [
-    {
-      internal_port = 8080
-      external_port = 8080
     },
   ]
 }

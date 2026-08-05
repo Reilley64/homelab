@@ -1,3 +1,8 @@
+# Declaration order throughout this module and at every call site:
+#   identity -> routing -> networking -> runtime -> host access
+
+# --- identity ---
+
 variable "name" {
   type = string
 }
@@ -6,23 +11,37 @@ variable "image" {
   type = string
 }
 
-variable "capabilities" {
-  type    = list(string)
-  default = []
+# --- routing ---
+
+variable "route_name" {
+  type        = string
+  default     = null
+  description = "Names the Traefik router, service and hostname when they shouldn't follow the container name — e.g. routing to a container that shares another's netns."
 }
 
 variable "port" {
-  type    = number
+  type        = number
+  default     = null
+  description = "Container port Traefik forwards to. Not var.ports, which publishes to the host."
+}
+
+variable "url" {
+  type        = string
+  default     = null
+  description = "Static backend url, in place of var.port."
+}
+
+variable "public" {
+  type    = bool
+  default = false
+}
+
+variable "cloudflare_zone_id" {
+  type    = string
   default = null
 }
 
-variable "ports" {
-  type = list(object({
-    internal_port = number
-    external_port = number
-  }))
-  default = []
-}
+# --- networking ---
 
 variable "networks" {
   type    = list(string)
@@ -30,14 +49,48 @@ variable "networks" {
 }
 
 variable "forward" {
-  type    = string
-  default = null
+  type        = string
+  default     = null
+  description = "Container to share a network namespace with, as \"container:<id>\"."
 }
+
+variable "ports" {
+  type = list(object({
+    internal_port = number
+    external_port = number
+  }))
+  default     = []
+  description = "Ports published to the host. Not var.port, which is Traefik's backend port."
+}
+
+# --- runtime ---
 
 variable "env" {
   type    = list(string)
   default = []
 }
+
+variable "command" {
+  type    = list(string)
+  default = []
+}
+
+variable "user" {
+  type    = string
+  default = null
+}
+
+variable "privileged" {
+  type    = bool
+  default = false
+}
+
+variable "capabilities" {
+  type    = list(string)
+  default = []
+}
+
+# --- host access ---
 
 variable "devices" {
   type = list(object({
@@ -53,29 +106,4 @@ variable "volumes" {
     host_path      = string
   }))
   default = []
-}
-
-variable "privileged" {
-  type    = bool
-  default = false
-}
-
-variable "command" {
-  type    = list(string)
-  default = []
-}
-
-variable "public" {
-  type    = bool
-  default = false
-}
-
-variable "cloudflare_zone_id" {
-  type    = string
-  default = null
-}
-
-variable "user" {
-  type = string
-  default = null
 }

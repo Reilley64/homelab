@@ -1,32 +1,35 @@
 locals {
-  hostname       = "${var.name}.example.invalid"
-  local_hostname = "${var.name}.localdomain"
+  route          = coalesce(var.route_name, var.name)
+  hostname       = "${local.route}.example.invalid"
+  local_hostname = "${local.route}.localdomain"
 
   base_labels = {
     "diun.enable"            = true
     "traefik.docker.network" = "traefik"
   }
 
-  traefik_port_label = var.port != null ? {
-    "traefik.http.services.${var.name}.loadbalancer.server.port" = var.port
+  traefik_backend_label = var.url != null ? {
+    "traefik.http.services.${local.route}.loadbalancer.server.url" = var.url
+    } : var.port != null ? {
+    "traefik.http.services.${local.route}.loadbalancer.server.port" = var.port
   } : {}
 
   traefik_public_labels = var.public ? {
-    "traefik.http.routers.${var.name}.rule"             = "Host(`${local.hostname}`)"
-    "traefik.http.routers.${var.name}.entrypoints"      = "websecure"
-    "traefik.http.routers.${var.name}.tls.certresolver" = "myresolver"
-    "traefik.http.routers.${var.name}.service"          = var.name
+    "traefik.http.routers.${local.route}.rule"             = "Host(`${local.hostname}`)"
+    "traefik.http.routers.${local.route}.entrypoints"      = "websecure"
+    "traefik.http.routers.${local.route}.tls.certresolver" = "myresolver"
+    "traefik.http.routers.${local.route}.service"          = local.route
   } : {}
 
-  traefik_local_labels = {
-    "traefik.http.routers.${var.name}local.rule"        = "Host(`${local.local_hostname}`)"
-    "traefik.http.routers.${var.name}local.entrypoints" = "web"
-    "traefik.http.routers.${var.name}local.service"     = var.name
-  }
+  traefik_local_labels = length(local.traefik_backend_label) > 0 ? {
+    "traefik.http.routers.${local.route}local.rule"        = "Host(`${local.local_hostname}`)"
+    "traefik.http.routers.${local.route}local.entrypoints" = "web"
+    "traefik.http.routers.${local.route}local.service"     = local.route
+  } : {}
 
   labels = merge(
     local.base_labels,
-    local.traefik_port_label,
+    local.traefik_backend_label,
     local.traefik_public_labels,
     local.traefik_local_labels
   )
@@ -43,14 +46,39 @@ resource "docker_image" "image" {
 }
 
 resource "docker_container" "container" {
-  image        = docker_image.image.image_id
-  name         = var.name
-  restart      = "unless-stopped"
-  privileged   = var.privileged
+  name    = var.name
+  image   = docker_image.image.image_id
+  restart = "unless-stopped"
+
+  dynamic "labels" {
+    for_each = local.labels
+    content {
+      label = labels.key
+      value = labels.value
+    }
+  }
+
   network_mode = var.forward
-  env          = var.env
-  user         = var.user
-  command      = var.command
+
+  dynamic "networks_advanced" {
+    for_each = var.networks
+    content {
+      name = networks_advanced.value
+    }
+  }
+
+  dynamic "ports" {
+    for_each = var.ports
+    content {
+      internal = ports.value.internal_port
+      external = ports.value.external_port
+    }
+  }
+
+  env        = var.env
+  command    = var.command
+  user       = var.user
+  privileged = var.privileged
 
   dynamic "capabilities" {
     for_each = length(var.capabilities) > 0 ? [1] : []
@@ -69,29 +97,6 @@ resource "docker_container" "container" {
     }
   }
 
-  dynamic "labels" {
-    for_each = local.labels
-    content {
-      label = labels.key
-      value = labels.value
-    }
-  }
-
-  dynamic "networks_advanced" {
-    for_each = var.networks
-    content {
-      name = networks_advanced.value
-    }
-  }
-
-  dynamic "ports" {
-    for_each = var.ports
-    content {
-      internal = ports.value.internal_port
-      external = ports.value.external_port
-    }
-  }
-
   dynamic "volumes" {
     for_each = var.volumes
     content {
@@ -106,8 +111,9 @@ resource "cloudflare_dns_record" "dns" {
   count = var.public ? 1 : 0
 
   zone_id = var.cloudflare_zone_id
-  name    = var.name
+  name    = local.route
   ttl     = 1
   type    = "CNAME"
   content = "app.example.invalid"
+  comment = "managed by terraform"
 }
