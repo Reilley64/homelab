@@ -6,16 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A personal homelab managed entirely with Terraform using the Docker and Cloudflare providers. All services run as Docker containers on a single host, with Traefik as the reverse proxy.
 
-## Common Commands
-
-```bash
-terraform init      # Initialize providers (run after cloning or adding providers)
-terraform plan      # Preview changes before applying
-terraform apply     # Deploy changes
-terraform fmt       # Format all .tf files
-terraform validate  # Validate configuration
-```
-
 Credentials and sensitive values live in a `.auto.tfvars` file (gitignored). See `variables.tf` for required inputs.
 
 ## Architecture
