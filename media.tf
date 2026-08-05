@@ -8,10 +8,10 @@ module "jellyfin" {
 
   name               = "jellyfin"
   image              = "linuxserver/jellyfin:latest"
-  public             = true
   port               = 8096
+  public             = true
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
-  networks           = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
+  networks           = [docker_network.media.id, docker_network.traefik.id]
 
   env = local.shared_env
 
@@ -93,23 +93,23 @@ module "seerr" {
 
   name               = "seerr"
   image              = "seerr/seerr:latest"
-  public             = true
   port               = 5055
+  public             = true
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
-  networks           = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
+  networks           = [docker_network.media.id, docker_network.traefik.id]
 
   env = local.shared_env
+
+  command = [
+    "npm",
+    "start",
+  ]
 
   volumes = [
     {
       container_path = "/app/config"
       host_path      = "/home/${var.username}/appdata/seerr"
     },
-  ]
-
-  command = [
-    "npm",
-    "start",
   ]
 }
 
