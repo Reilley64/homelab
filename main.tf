@@ -65,4 +65,5 @@ resource "cloudflare_dns_record" "app" {
   ttl     = 1
   type    = "A"
   content = data.http.myip.response_body
+  comment = "managed by terraform"
 }
