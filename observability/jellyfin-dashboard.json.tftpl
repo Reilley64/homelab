@@ -25,7 +25,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "rate(traefik_router_responses_bytes_total{router=\"jellyfin@docker\"}[5m]) * 8",
+          "expr": "sum(rate(traefik_router_responses_bytes_total{router=\"jellyfin@docker\"}[5m])) * 8",
           "legendFormat": "public"
         }
       ]
