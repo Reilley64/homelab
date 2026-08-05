@@ -2,5 +2,5 @@
 .idea
 *.tfstate
 *.tfstate.backup
-.auto.tfvars
+*.tfvars
 .terraform.lock.hcl
