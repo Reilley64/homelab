@@ -68,3 +68,48 @@ module "prometheus" {
     },
   ]
 }
+
+module "grafana" {
+  source = "./modules/service"
+
+  name     = "grafana"
+  image    = "grafana/grafana:latest"
+  port     = 3000
+  networks = [docker_network.observability.id, docker_network.traefik.id]
+
+  env = concat(local.shared_env, [
+    "GF_SECURITY_ADMIN_PASSWORD=${var.password}",
+    "GF_SERVER_ROOT_URL=http://grafana.localdomain",
+  ])
+
+  user = "${var.uid}:${var.gid}"
+
+  volumes = [
+    {
+      container_path = "/var/lib/grafana"
+      host_path      = "/home/${var.username}/appdata/grafana"
+    },
+  ]
+}
+
+resource "time_sleep" "grafana_ready" {
+  depends_on = [module.grafana]
+
+  create_duration = "30s"
+}
+
+resource "grafana_data_source" "prometheus" {
+  depends_on = [time_sleep.grafana_ready]
+
+  type       = "prometheus"
+  name       = "Prometheus"
+  uid        = "prometheus"
+  url        = "http://prometheus:9090"
+  is_default = true
+}
+
+resource "grafana_folder" "homelab" {
+  depends_on = [time_sleep.grafana_ready]
+
+  title = "Homelab"
+}

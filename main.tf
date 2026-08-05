@@ -6,6 +6,11 @@ provider "cloudflare" {
   api_token = var.cloudflare_api_token
 }
 
+provider "grafana" {
+  url  = "http://grafana.localdomain"
+  auth = "admin:${var.password}"
+}
+
 locals {
   shared_env = [
     "TZ=Australia/Melbourne",
