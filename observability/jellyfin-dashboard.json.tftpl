@@ -33,7 +33,7 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "Public egress (24h)",
+      "title": "Public egress",
       "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
       "gridPos": { "h": 9, "w": 8, "x": 16, "y": 0 },
       "fieldConfig": {
@@ -44,7 +44,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(traefik_router_responses_bytes_total{router=\"jellyfin@docker\"}[24h]))",
+          "expr": "sum(increase(traefik_router_responses_bytes_total{router=\"jellyfin@docker\"}[$__range]))",
           "instant": true
         }
       ]
