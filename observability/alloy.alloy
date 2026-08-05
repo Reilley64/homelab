@@ -25,7 +25,7 @@ loki.process "jellyfin" {
 
   // (?s) so the message group swallows the newlines of a joined stack trace.
   stage.regex {
-    expression = "(?s)^\\[(?P<ts>[^\\]]+)\\] \\[(?P<level>\\w+)\\] (?P<message>.*)"
+    expression = "(?s)^\\[(?P<ts>[^\\]]+)\\] \\[(?P<level>\\w+)\\] \\[(?P<thread>\\d+)\\] (?P<message>.*)"
   }
 
   // Take Jellyfin's timestamp, not ingest time, so a replayed file lands on the
@@ -48,8 +48,15 @@ loki.process "jellyfin" {
     }
   }
 
-  // Grafana renders the timestamp and level in their own columns. A line that
-  // didn't match the regex is left whole.
+  // Metadata, not a label: thread ids are unbounded and would shard the stream.
+  stage.structured_metadata {
+    values = {
+      thread = "thread",
+    }
+  }
+
+  // Grafana renders the timestamp, level and thread in their own columns. A
+  // line that didn't match the regex is left whole.
   stage.output {
     source = "message"
   }
