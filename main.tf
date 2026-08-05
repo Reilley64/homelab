@@ -15,7 +15,6 @@ provider "unifi" {
   api_url = "https://192.168.86.1"
   api_key = var.unifi_api_key
 
-  # ponytail: the controller serves its own self-signed cert
   allow_insecure = true
 }
 
@@ -62,21 +61,22 @@ module "diun" {
   ]
 }
 
-data "http" "myip" {
-  url = "https://ipv4.icanhazip.com"
-}
-
 data "cloudflare_zone" "reilley_dev" {
   filter = {
     name = "example.invalid"
   }
 }
 
-resource "cloudflare_dns_record" "app" {
-  zone_id = data.cloudflare_zone.reilley_dev.id
-  name    = "app"
-  ttl     = 1
-  type    = "A"
-  content = chomp(data.http.myip.response_body)
-  comment = "managed by terraform"
+module "ddns" {
+  source = "./modules/service"
+
+  name  = "cloudflare-ddns"
+  image = "favonia/cloudflare-ddns:1.17.0"
+
+  env = concat(local.shared_env, [
+    "CLOUDFLARE_API_TOKEN=${var.cloudflare_api_token}",
+    "DOMAINS=app.example.invalid",
+    "IP6_PROVIDER=none",
+    "RECORD_COMMENT=managed by cloudflare-ddns",
+  ])
 }
