@@ -31,6 +31,24 @@
                         }
                     ]
                 }
+            },
+            {
+                "Name": "Async",
+                "Args": {
+                    "configure": [
+                        {
+                            "Name": "File",
+                            "Args": {
+                                "formatter": "Serilog.Formatting.Compact.RenderedCompactJsonFormatter, Serilog.Formatting.Compact",
+                                "path": "%JELLYFIN_LOG_DIR%//json_.log",
+                                "rollingInterval": "Hour",
+                                "retainedFileCountLimit": 12,
+                                "rollOnFileSizeLimit": true,
+                                "fileSizeLimitBytes": 100000000
+                            }
+                        }
+                    ]
+                }
             }
         ],
         "Enrich": [ "FromLogContext", "WithThreadId" ]

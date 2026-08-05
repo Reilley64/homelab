@@ -2,9 +2,12 @@
 // files needs no docker socket — and picks up the FFmpeg session logs, which
 // never reach stdout.
 
+// json_*.log is a second sink Jellyfin writes in CLEF. It exists because
+// logging.default.json and logging.json are merged, not replaced: the stock
+// outputTemplate can't be removed, only shadowed by a sink at a fresh index.
 local.file_match "jellyfin" {
   path_targets = [{
-    __path__     = "/logs/log_*.log",
+    __path__     = "/logs/json_*.log",
     job          = "jellyfin",
     service_name = "jellyfin",
   }]
@@ -18,28 +21,31 @@ loki.source.file "jellyfin" {
 loki.process "jellyfin" {
   forward_to = [loki.write.default.receiver]
 
-  // Without this, a .NET stack trace becomes one Loki entry per line.
-  stage.multiline {
-    firstline = "^\\[\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"
-  }
-
-  // (?s) so the message group swallows the newlines of a joined stack trace.
-  stage.regex {
-    expression = "(?s)^\\[(?P<ts>[^\\]]+)\\] \\[(?P<level>\\w+)\\] \\[(?P<thread>\\d+)\\] (?P<message>.*)"
+  // CLEF is one object per event with the exception inline, so nothing needs
+  // stitching back together.
+  stage.json {
+    expressions = {
+      ts        = "\"@t\"",
+      level     = "\"@l\"",
+      message   = "\"@m\"",
+      exception = "\"@x\"",
+      thread    = "ThreadId",
+      logger    = "SourceContext",
+    }
   }
 
   // Take Jellyfin's timestamp, not ingest time, so a replayed file lands on the
   // dashboard where it actually happened.
   stage.timestamp {
     source = "ts"
-    format = "2006-01-02 15:04:05.000 -07:00"
+    format = "RFC3339Nano"
   }
 
-  // Serilog writes INF/WRN/ERR; Grafana only colours the full names, and shows
-  // anything else as UNK.
+  // CLEF leaves @l out entirely at Information. Serilog's Verbose is Grafana's
+  // trace; the rest match once lowercased.
   stage.template {
     source   = "level"
-    template = "{{ if eq .Value \"INF\" }}info{{ else if eq .Value \"WRN\" }}warn{{ else if eq .Value \"ERR\" }}error{{ else if eq .Value \"DBG\" }}debug{{ else if eq .Value \"FTL\" }}critical{{ else if eq .Value \"TRC\" }}trace{{ else }}{{ .Value }}{{ end }}"
+    template = "{{ if eq .Value \"Verbose\" }}trace{{ else if .Value }}{{ ToLower .Value }}{{ else }}info{{ end }}"
   }
 
   stage.labels {
@@ -48,15 +54,22 @@ loki.process "jellyfin" {
     }
   }
 
-  // Metadata, not a label: thread ids are unbounded and would shard the stream.
+  // Metadata, not labels: thread ids are unbounded and loggers number in the
+  // hundreds, either of which would shard the stream.
   stage.structured_metadata {
     values = {
       thread = "thread",
+      logger = "logger",
     }
   }
 
-  // Grafana renders the timestamp, level and thread in their own columns. A
-  // line that didn't match the regex is left whole.
+  // @m alone drops the source context that made the text log scannable, so put
+  // it back on the front. Grafana renders timestamp and level itself.
+  stage.template {
+    source   = "message"
+    template = "{{ .logger }}: {{ .Value }}{{ if .exception }}\n{{ .exception }}{{ end }}"
+  }
+
   stage.output {
     source = "message"
   }
