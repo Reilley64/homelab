@@ -1,0 +1,63 @@
+// Jellyfin writes the same stream to stdout and to /config/log, so tailing the
+// files needs no docker socket — and picks up the FFmpeg session logs, which
+// never reach stdout.
+
+local.file_match "jellyfin" {
+  path_targets = [{
+    __path__     = "/logs/log_*.log",
+    job          = "jellyfin",
+    service_name = "jellyfin",
+  }]
+}
+
+loki.source.file "jellyfin" {
+  targets    = local.file_match.jellyfin.targets
+  forward_to = [loki.process.jellyfin.receiver]
+}
+
+loki.process "jellyfin" {
+  forward_to = [loki.write.default.receiver]
+
+  // Without this, a .NET stack trace becomes one Loki entry per line.
+  stage.multiline {
+    firstline = "^\\[\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"
+  }
+
+  stage.regex {
+    expression = "^\\[(?P<ts>[^\\]]+)\\] \\[(?P<level>\\w+)\\]"
+  }
+
+  // Take Jellyfin's timestamp, not ingest time, so a replayed file lands on the
+  // dashboard where it actually happened.
+  stage.timestamp {
+    source = "ts"
+    format = "2006-01-02 15:04:05.000 -07:00"
+  }
+
+  stage.labels {
+    values = {
+      level = "level",
+    }
+  }
+}
+
+local.file_match "jellyfin_ffmpeg" {
+  path_targets = [{
+    __path__     = "/logs/FFmpeg*.log",
+    job          = "jellyfin-ffmpeg",
+    service_name = "jellyfin",
+  }]
+}
+
+// ponytail: no parsing — ffmpeg stderr carries no timestamps, so these take
+// ingest time. Close enough; the file is written as the session runs.
+loki.source.file "jellyfin_ffmpeg" {
+  targets    = local.file_match.jellyfin_ffmpeg.targets
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

@@ -69,6 +69,74 @@ module "prometheus" {
   ]
 }
 
+module "loki" {
+  source = "./modules/service"
+
+  name     = "loki"
+  image    = "grafana/loki:latest"
+  port     = 3100
+  networks = [docker_network.observability.id, docker_network.traefik.id]
+
+  env  = local.shared_env
+  user = "${var.uid}:${var.gid}"
+
+  command = [
+    "-config.file=/etc/loki/loki.yml",
+  ]
+
+  uploads = [
+    {
+      file    = "/etc/loki/loki.yml"
+      content = file("${path.module}/observability/loki.yml")
+    },
+  ]
+
+  volumes = [
+    {
+      container_path = "/loki"
+      host_path      = "/home/${var.username}/appdata/loki"
+    },
+  ]
+}
+
+module "alloy" {
+  source = "./modules/service"
+
+  name     = "alloy"
+  image    = "grafana/alloy:latest"
+  networks = [docker_network.observability.id]
+
+  env  = local.shared_env
+  user = "${var.uid}:${var.gid}"
+
+  # ponytail: /var/lib/alloy is drwxrwx--- alloy:alloy in the image, so uid 1000
+  # can't reach a mount underneath it.
+  command = [
+    "run",
+    "/etc/alloy/config.alloy",
+    "--storage.path=/alloy",
+  ]
+
+  uploads = [
+    {
+      file    = "/etc/alloy/config.alloy"
+      content = file("${path.module}/observability/alloy.alloy")
+    },
+  ]
+
+  volumes = [
+    {
+      container_path = "/alloy"
+      host_path      = "/home/${var.username}/appdata/alloy"
+    },
+    {
+      container_path = "/logs"
+      host_path      = "/home/${var.username}/appdata/jellyfin/log"
+      read_only      = true
+    },
+  ]
+}
+
 module "grafana" {
   source = "./modules/service"
 
@@ -106,6 +174,33 @@ resource "grafana_data_source" "prometheus" {
   uid        = "prometheus"
   url        = "http://prometheus:9090"
   is_default = true
+}
+
+resource "grafana_data_source" "loki" {
+  depends_on = [time_sleep.grafana_ready]
+
+  type = "loki"
+  name = "Loki"
+  uid  = "loki"
+  url  = "http://loki:3100"
+}
+
+resource "grafana_service_account" "claude" {
+  depends_on = [time_sleep.grafana_ready]
+
+  name = "claude"
+  role = "Viewer"
+}
+
+resource "grafana_service_account_token" "claude" {
+  name               = "claude"
+  service_account_id = grafana_service_account.claude.id
+}
+
+resource "local_sensitive_file" "grafana_token" {
+  filename        = "${path.module}/.grafana-token"
+  content         = grafana_service_account_token.claude.key
+  file_permission = "0600"
 }
 
 resource "grafana_folder" "homelab" {

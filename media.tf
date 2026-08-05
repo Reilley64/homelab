@@ -15,6 +15,13 @@ module "jellyfin" {
 
   env = local.shared_env
 
+  uploads = [
+    {
+      file    = "/config/logging.json"
+      content = file("${path.module}/observability/jellyfin-logging.json")
+    },
+  ]
+
   devices = [
     {
       container_path = "/dev/dri"
