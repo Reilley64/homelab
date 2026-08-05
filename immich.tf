@@ -15,8 +15,8 @@ module "immich" {
 
   name               = "immich"
   image              = "ghcr.io/immich-app/immich-server:v2.5.6"
-  public             = true
   port               = 2283
+  public             = true
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
   networks           = [docker_network.immich.id, docker_network.traefik.id]
 

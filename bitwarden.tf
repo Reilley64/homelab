@@ -3,8 +3,8 @@ module "bitwarden" {
 
   name               = "bitwarden"
   image              = "vaultwarden/server:latest"
-  public             = true
   port               = 80
+  public             = true
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
   networks           = [docker_network.traefik.id]
 

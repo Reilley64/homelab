@@ -10,18 +10,6 @@ module "traefik" {
   image    = "traefik:latest"
   networks = [docker_network.traefik.id]
 
-  env = local.shared_env
-
-  command = [
-    "--api.insecure=true",
-    "--providers.docker=true",
-    "--entrypoints.web.address=:80",
-    "--entrypoints.websecure.address=:443",
-    "--certificatesresolvers.myresolver.acme.tlschallenge=true",
-    "--certificatesresolvers.myresolver.acme.email=reilleygray@gmail.com",
-    "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json",
-  ]
-
   ports = [
     {
       internal_port = 80
@@ -35,6 +23,18 @@ module "traefik" {
       internal_port = 8080
       external_port = 4040
     },
+  ]
+
+  env = local.shared_env
+
+  command = [
+    "--api.insecure=true",
+    "--providers.docker=true",
+    "--entrypoints.web.address=:80",
+    "--entrypoints.websecure.address=:443",
+    "--certificatesresolvers.myresolver.acme.tlschallenge=true",
+    "--certificatesresolvers.myresolver.acme.email=reilleygray@gmail.com",
+    "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json",
   ]
 
   volumes = [

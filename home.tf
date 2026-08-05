@@ -48,17 +48,17 @@ module "piper" {
   port     = 10200
   networks = [docker_network.home.id]
 
-  env = local.shared_env
-
-  command = [
-    "--voice=en_US-lessac-medium",
-  ]
-
   ports = [
     {
       internal_port = 10200
       external_port = 10200
     },
+  ]
+
+  env = local.shared_env
+
+  command = [
+    "--voice=en_US-lessac-medium",
   ]
 
   volumes = [
@@ -76,18 +76,18 @@ module "whisper" {
   image    = "rhasspy/wyoming-whisper:3.0.2"
   networks = [docker_network.home.id]
 
-  env = local.shared_env
-
-  command = [
-    "--model=base",
-    "--language=en",
-  ]
-
   ports = [
     {
       internal_port = 10300
       external_port = 10300
     },
+  ]
+
+  env = local.shared_env
+
+  command = [
+    "--model=base",
+    "--language=en",
   ]
 
   volumes = [

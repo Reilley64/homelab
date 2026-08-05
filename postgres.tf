@@ -10,6 +10,13 @@ module "postgres" {
   image    = "postgres:14"
   networks = [docker_network.postgres.id]
 
+  ports = [
+    {
+      internal_port = 5432
+      external_port = 5432
+    }
+  ]
+
   env = concat(local.shared_env, [
     "POSTGRES_USER=${var.username}",
     "POSTGRES_PASSWORD=${var.password}",
@@ -17,13 +24,6 @@ module "postgres" {
 
   command = [
     "postgres",
-  ]
-
-  ports = [
-    {
-      internal_port = 5432
-      external_port = 5432
-    }
   ]
 
   volumes = [
