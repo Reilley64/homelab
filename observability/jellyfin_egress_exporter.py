@@ -2,9 +2,15 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import os
+import sys
 import threading
+import time
 from collections import defaultdict
 from dataclasses import dataclass
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib import request
 
 PUBLIC_ROUTER = "jellyfin@docker"
 
@@ -45,6 +51,12 @@ class AccessEvent:
     byte_count: int
 
 
+@dataclass(frozen=True)
+class Checkpoint:
+    inode: int
+    offset: int
+
+
 def parse_access_line(line: str) -> AccessEvent | None:
     entry = json.loads(line)
     if not isinstance(entry, dict):
@@ -58,6 +70,38 @@ def parse_access_line(line: str) -> AccessEvent | None:
     if client_ip is None:
         raise ValueError("ClientHost must be an IP address")
     return AccessEvent(client_ip=client_ip, byte_count=byte_count)
+
+
+def load_checkpoint(path: str) -> Checkpoint | None:
+    try:
+        with open(path, encoding="utf-8") as handle:
+            value = json.load(handle)
+        return Checkpoint(inode=int(value["inode"]), offset=int(value["offset"]))
+    except (FileNotFoundError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def save_checkpoint(path: str, checkpoint: Checkpoint) -> None:
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(destination.suffix + ".tmp")
+    temporary.write_text(
+        json.dumps({"inode": checkpoint.inode, "offset": checkpoint.offset}),
+        encoding="utf-8",
+    )
+    os.replace(temporary, destination)
+
+
+def fetch_sessions(base_url: str, api_key: str, timeout: float = 10) -> list[dict]:
+    api_request = request.Request(
+        base_url.rstrip("/") + "/Sessions",
+        headers={"X-Emby-Token": api_key, "Accept": "application/json"},
+    )
+    with request.urlopen(api_request, timeout=timeout) as response:
+        sessions = json.loads(response.read())
+    if not isinstance(sessions, list):
+        raise ValueError("Jellyfin /Sessions did not return a list")
+    return sessions
 
 
 class MappingCache:
@@ -138,3 +182,140 @@ class MetricState:
                 f"jellyfin_egress_active_ip_mappings {active_mappings}",
             ])
             return "\n".join(lines) + "\n"
+
+
+def process_available(
+    log_path: str,
+    checkpoint_path: str,
+    cache: MappingCache,
+    state: MetricState,
+    now: float,
+) -> int:
+    try:
+        stat = os.stat(log_path)
+    except FileNotFoundError:
+        return 0
+    checkpoint = load_checkpoint(checkpoint_path)
+    if checkpoint is None:
+        start_offset = stat.st_size
+        save_checkpoint(checkpoint_path, Checkpoint(stat.st_ino, start_offset))
+    elif checkpoint.inode != stat.st_ino or checkpoint.offset > stat.st_size:
+        start_offset = 0
+        state.checkpoint_discontinuities += 1
+    else:
+        start_offset = checkpoint.offset
+    processed = 0
+    with open(log_path, encoding="utf-8") as handle:
+        handle.seek(start_offset)
+        while True:
+            line = handle.readline()
+            if not line:
+                break
+            try:
+                event = parse_access_line(line)
+                if event is not None:
+                    state.apply(event, cache.lookup(event.client_ip, now))
+                    processed += 1
+            except (json.JSONDecodeError, TypeError, ValueError):
+                state.access_log_errors += 1
+            save_checkpoint(checkpoint_path, Checkpoint(stat.st_ino, handle.tell()))
+    return processed
+
+
+@dataclass(frozen=True)
+class Settings:
+    jellyfin_url: str
+    api_key: str
+    access_log_path: str
+    checkpoint_path: str
+    mapping_ttl_seconds: float
+    session_poll_seconds: float
+    metrics_port: int
+
+
+@dataclass
+class Runtime:
+    settings: Settings
+    cache: MappingCache
+    state: MetricState
+
+
+def read_settings() -> Settings:
+    api_key = os.environ.get("JELLYFIN_API_KEY", "")
+    if not api_key:
+        raise SystemExit("JELLYFIN_API_KEY is required")
+    return Settings(
+        jellyfin_url=os.environ.get("JELLYFIN_URL", "http://jellyfin:8096"),
+        api_key=api_key,
+        access_log_path=os.environ.get("ACCESS_LOG_PATH", "/logs/access.json"),
+        checkpoint_path=os.environ.get("CHECKPOINT_PATH", "/state/checkpoint.json"),
+        mapping_ttl_seconds=float(os.environ.get("MAPPING_TTL_SECONDS", "600")),
+        session_poll_seconds=float(os.environ.get("SESSION_POLL_SECONDS", "15")),
+        metrics_port=int(os.environ.get("METRICS_PORT", "9101")),
+    )
+
+
+def poll_sessions_forever(runtime: Runtime) -> None:
+    while True:
+        try:
+            sessions = fetch_sessions(runtime.settings.jellyfin_url, runtime.settings.api_key)
+            runtime.cache.observe_sessions(sessions, time.time())
+        except Exception as error:
+            with runtime.state._lock:
+                runtime.state.api_failures += 1
+            print(f"Jellyfin session poll failed: {error}", file=sys.stderr, flush=True)
+        time.sleep(runtime.settings.session_poll_seconds)
+
+
+def tail_access_log_forever(runtime: Runtime) -> None:
+    while True:
+        try:
+            process_available(
+                runtime.settings.access_log_path,
+                runtime.settings.checkpoint_path,
+                runtime.cache,
+                runtime.state,
+                time.time(),
+            )
+        except Exception as error:
+            with runtime.state._lock:
+                runtime.state.access_log_errors += 1
+            print(f"access-log tail failed: {error}", file=sys.stderr, flush=True)
+        time.sleep(1)
+
+
+class MetricsHandler(BaseHTTPRequestHandler):
+    runtime: Runtime
+
+    def do_GET(self):
+        if self.path != "/metrics":
+            self.send_error(404)
+            return
+        body = self.runtime.state.render(
+            active_mappings=self.runtime.cache.active_count(time.time())
+        ).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format, *args):
+        return
+
+
+def main() -> None:
+    settings = read_settings()
+    runtime = Runtime(
+        settings=settings,
+        cache=MappingCache(settings.mapping_ttl_seconds),
+        state=MetricState(),
+    )
+    MetricsHandler.runtime = runtime
+    threading.Thread(target=poll_sessions_forever, args=(runtime,), daemon=True).start()
+    threading.Thread(target=tail_access_log_forever, args=(runtime,), daemon=True).start()
+    ThreadingHTTPServer(("0.0.0.0", settings.metrics_port), MetricsHandler).serve_forever()
+
+
+if __name__ == "__main__":
+    main()
