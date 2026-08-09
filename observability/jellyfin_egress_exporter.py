@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import ipaddress
 import json
 import os
@@ -13,6 +14,7 @@ from pathlib import Path
 from urllib import request
 
 PUBLIC_ROUTER = "jellyfin@docker"
+CHECKPOINT_ANCHOR_BYTES = 64
 
 
 def normalize_address(value: str) -> str | None:
@@ -24,6 +26,9 @@ def normalize_address(value: str) -> str | None:
     if candidate.startswith("["):
         close = candidate.find("]")
         if close == -1:
+            return None
+        suffix = candidate[close + 1:]
+        if suffix and (not suffix.startswith(":") or not suffix[1:].isdigit()):
             return None
         candidate = candidate[1:close]
     else:
@@ -57,6 +62,7 @@ class AccessEvent:
 class Checkpoint:
     inode: int
     offset: int
+    anchor: str | None = None
 
 
 def parse_access_line(line: str) -> AccessEvent | None:
@@ -78,7 +84,20 @@ def load_checkpoint(path: str) -> Checkpoint | None:
     try:
         with open(path, encoding="utf-8") as handle:
             value = json.load(handle)
-        return Checkpoint(inode=int(value["inode"]), offset=int(value["offset"]))
+        if not isinstance(value, dict):
+            return None
+        inode = int(value["inode"])
+        offset = int(value["offset"])
+        if inode < 0 or offset < 0:
+            return None
+        anchor = value.get("anchor")
+        if anchor is not None and not isinstance(anchor, str):
+            return None
+        return Checkpoint(
+            inode=inode,
+            offset=offset,
+            anchor=anchor,
+        )
     except (FileNotFoundError, KeyError, TypeError, ValueError, json.JSONDecodeError):
         return None
 
@@ -88,10 +107,25 @@ def save_checkpoint(path: str, checkpoint: Checkpoint) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(destination.suffix + ".tmp")
     temporary.write_text(
-        json.dumps({"inode": checkpoint.inode, "offset": checkpoint.offset}),
+        json.dumps({
+            "inode": checkpoint.inode,
+            "offset": checkpoint.offset,
+            "anchor": checkpoint.anchor,
+        }),
         encoding="utf-8",
     )
     os.replace(temporary, destination)
+
+
+def checkpoint_anchor(handle, offset: int) -> str:
+    position = handle.tell()
+    anchor_start = max(0, offset - CHECKPOINT_ANCHOR_BYTES)
+    try:
+        handle.seek(anchor_start)
+        anchor_bytes = handle.read(offset - anchor_start)
+    finally:
+        handle.seek(position)
+    return hashlib.sha256(anchor_bytes).hexdigest()
 
 
 def fetch_sessions(base_url: str, api_key: str, timeout: float = 10) -> list[dict]:
@@ -201,35 +235,52 @@ def process_available(
     now: float,
 ) -> int:
     try:
-        stat = os.stat(log_path)
+        handle = open(log_path, "rb")
     except FileNotFoundError:
         return 0
-    checkpoint = load_checkpoint(checkpoint_path)
-    if checkpoint is None:
-        start_offset = stat.st_size
-        save_checkpoint(checkpoint_path, Checkpoint(stat.st_ino, start_offset))
-    elif checkpoint.inode != stat.st_ino or checkpoint.offset > stat.st_size:
-        start_offset = 0
-        state.checkpoint_discontinuities += 1
-    else:
-        start_offset = checkpoint.offset
-    processed = 0
-    with open(log_path, encoding="utf-8") as handle:
+    with handle:
+        stat = os.fstat(handle.fileno())
+        checkpoint = load_checkpoint(checkpoint_path)
+        if checkpoint is None:
+            start_offset = stat.st_size
+            save_checkpoint(
+                checkpoint_path,
+                Checkpoint(stat.st_ino, start_offset, checkpoint_anchor(handle, start_offset)),
+            )
+        elif (
+            checkpoint.inode != stat.st_ino
+            or checkpoint.offset > stat.st_size
+            or checkpoint.anchor is None
+            or checkpoint.anchor != checkpoint_anchor(handle, checkpoint.offset)
+        ):
+            start_offset = 0
+            state.checkpoint_discontinuities += 1
+            save_checkpoint(
+                checkpoint_path,
+                Checkpoint(stat.st_ino, start_offset, checkpoint_anchor(handle, start_offset)),
+            )
+        else:
+            start_offset = checkpoint.offset
+        processed = 0
         handle.seek(start_offset)
         while True:
             line = handle.readline()
             if not line:
                 break
-            if not line.endswith("\n"):
+            if not line.endswith(b"\n"):
                 break
             try:
-                event = parse_access_line(line)
+                event = parse_access_line(line.decode("utf-8"))
                 if event is not None:
                     state.apply(event, cache.lookup(event.client_ip, now))
                     processed += 1
-            except (json.JSONDecodeError, TypeError, ValueError):
+            except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
                 state.access_log_errors += 1
-            save_checkpoint(checkpoint_path, Checkpoint(stat.st_ino, handle.tell()))
+            offset = handle.tell()
+            save_checkpoint(
+                checkpoint_path,
+                Checkpoint(stat.st_ino, offset, checkpoint_anchor(handle, offset)),
+            )
     return processed
 
 

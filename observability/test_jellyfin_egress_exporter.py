@@ -19,6 +19,12 @@ class NormalizeAddressTests(unittest.TestCase):
     def test_normalizes_bracketed_ipv6(self):
         self.assertEqual(normalize_address("[2001:db8::8]:44321"), "2001:db8::8")
 
+    def test_rejects_invalid_bracketed_ipv6_suffixes(self):
+        self.assertEqual(normalize_address("[2001:db8::8]"), "2001:db8::8")
+        self.assertEqual(normalize_address("[2001:db8::8]:44321"), "2001:db8::8")
+        self.assertIsNone(normalize_address("[2001:db8::8]junk"))
+        self.assertIsNone(normalize_address("[2001:db8::8]:invalid"))
+
     def test_rejects_empty_or_invalid_addresses(self):
         self.assertIsNone(normalize_address(""))
         self.assertIsNone(normalize_address("not-an-address"))
@@ -104,7 +110,27 @@ class MetricStateTests(unittest.TestCase):
         self.assertIn('user="a\\"b\\\\c"', state.render(active_mappings=1))
 
 
-from jellyfin_egress_exporter import Checkpoint, process_available, save_checkpoint
+from jellyfin_egress_exporter import Checkpoint, load_checkpoint, process_available, save_checkpoint
+
+
+class CheckpointTests(unittest.TestCase):
+    def test_loads_legacy_checkpoint_without_an_anchor(self):
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint_path = os.path.join(directory, "checkpoint.json")
+            with open(checkpoint_path, "w", encoding="utf-8") as handle:
+                json.dump({"inode": 123, "offset": 456}, handle)
+
+            checkpoint = load_checkpoint(checkpoint_path)
+
+            self.assertEqual(checkpoint, Checkpoint(123, 456, None))
+
+    def test_rejects_non_object_checkpoint_json(self):
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint_path = os.path.join(directory, "checkpoint.json")
+            with open(checkpoint_path, "w", encoding="utf-8") as handle:
+                json.dump([], handle)
+
+            self.assertIsNone(load_checkpoint(checkpoint_path))
 
 
 class TailerTests(unittest.TestCase):
@@ -168,6 +194,62 @@ class TailerTests(unittest.TestCase):
             state = MetricState()
             self.assertEqual(process_available(log_path, checkpoint_path, MappingCache(600), state, now=1001), 1)
             self.assertEqual(state.checkpoint_discontinuities, 1)
+
+    def test_detects_copy_truncate_when_regrown_past_saved_offset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log_path = os.path.join(directory, "access.json")
+            checkpoint_path = os.path.join(directory, "checkpoint.json")
+            with open(log_path, "w", encoding="utf-8") as handle:
+                handle.write("x" * 512 + "\n")
+            original_inode = os.stat(log_path).st_ino
+            process_available(log_path, checkpoint_path, MappingCache(600), MetricState(), now=1000)
+
+            new_event = json.dumps({
+                "RouterName": "jellyfin@docker",
+                "ClientHost": "203.0.113.8",
+                "DownstreamContentSize": 25,
+            }) + "\n"
+            ignored_record = json.dumps({"RouterName": "traefik@docker"}) + "\n"
+            with open(log_path, "w", encoding="utf-8") as handle:
+                handle.write(new_event + ignored_record * 32)
+            self.assertEqual(os.stat(log_path).st_ino, original_inode)
+
+            state = MetricState()
+            self.assertEqual(process_available(log_path, checkpoint_path, MappingCache(600), state, now=1001), 1)
+            self.assertEqual(state.checkpoint_discontinuities, 1)
+            self.assertIn("jellyfin_egress_unattributed_bytes_total 25", state.render(0))
+
+    def test_legacy_checkpoint_restarts_conservatively(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log_path = os.path.join(directory, "access.json")
+            checkpoint_path = os.path.join(directory, "checkpoint.json")
+            event = json.dumps({
+                "RouterName": "jellyfin@docker",
+                "ClientHost": "203.0.113.8",
+                "DownstreamContentSize": 25,
+            }) + "\n"
+            with open(log_path, "w", encoding="utf-8") as handle:
+                handle.write(event)
+            with open(checkpoint_path, "w", encoding="utf-8") as handle:
+                json.dump({"inode": os.stat(log_path).st_ino, "offset": len(event)}, handle)
+
+            state = MetricState()
+            self.assertEqual(process_available(log_path, checkpoint_path, MappingCache(600), state, now=1000), 1)
+            self.assertEqual(state.checkpoint_discontinuities, 1)
+
+    def test_new_checkpoint_json_contains_a_bounded_anchor_fingerprint(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log_path = os.path.join(directory, "access.json")
+            checkpoint_path = os.path.join(directory, "checkpoint.json")
+            with open(log_path, "w", encoding="utf-8") as handle:
+                handle.write("existing log content\n")
+
+            process_available(log_path, checkpoint_path, MappingCache(600), MetricState(), now=1000)
+
+            with open(checkpoint_path, encoding="utf-8") as handle:
+                checkpoint_data = json.load(handle)
+            self.assertIsInstance(checkpoint_data.get("anchor"), str)
+            self.assertEqual(len(checkpoint_data["anchor"]), 64)
 
     def test_first_start_begins_at_end_of_existing_file(self):
         with tempfile.TemporaryDirectory() as directory:
