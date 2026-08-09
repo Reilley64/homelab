@@ -54,7 +54,7 @@
       "type": "timeseries",
       "title": "Request rate, public vs LAN",
       "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
@@ -76,7 +76,7 @@
       "type": "timeseries",
       "title": "Public request latency",
       "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -103,7 +103,7 @@
       "type": "timeseries",
       "title": "Public status codes",
       "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 26 },
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
@@ -122,6 +122,83 @@
           "refId": "A",
           "expr": "sum by (code) (rate(traefik_router_requests_total{router=\"jellyfin@docker\"}[5m]))",
           "legendFormat": "{{code}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "barchart",
+      "title": "Public egress by user",
+      "description": "Exact public response-body bytes attributed to the latest Jellyfin user observed for each client IP.",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "fieldConfig": {
+        "defaults": { "unit": "decbytes" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (user) (increase(jellyfin_user_egress_bytes_total[$__range]))",
+          "legendFormat": "{{user}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Upload rate by user",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0,
+          "custom": { "fillOpacity": 20, "lineWidth": 2, "showPoints": "never" }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (user) (rate(jellyfin_user_egress_bytes_total[5m])) * 8",
+          "legendFormat": "{{user}}"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "User/IP attribution",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 34 },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Egress" },
+            "properties": [{ "id": "unit", "value": "decbytes" }]
+          }
+        ]
+      },
+      "transformations": [
+        { "id": "labelsToFields", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true },
+            "indexByName": { "user": 0, "client_ip": 1, "Value": 2 },
+            "renameByName": { "Value": "Egress" }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (user, client_ip) (increase(jellyfin_user_egress_bytes_total[$__range]))",
+          "instant": true,
+          "format": "table"
         }
       ]
     }
