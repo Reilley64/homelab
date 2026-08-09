@@ -213,7 +213,13 @@ class FetchSessionsTests(unittest.TestCase):
             fetch_sessions("http://jellyfin:8096", "secret")
 
 
-from jellyfin_egress_exporter import MetricsHandler, Runtime, Settings, read_settings
+from jellyfin_egress_exporter import (
+    MetricsHandler,
+    Runtime,
+    Settings,
+    poll_sessions_forever,
+    read_settings,
+)
 
 
 class RuntimeTests(unittest.TestCase):
@@ -264,3 +270,74 @@ class RuntimeTests(unittest.TestCase):
     def test_api_key_is_required(self):
         with self.assertRaisesRegex(SystemExit, "JELLYFIN_API_KEY is required"):
             read_settings()
+
+
+class TailerRegressionTests(unittest.TestCase):
+    def test_typed_client_host_error_is_checkpointed_and_later_line_is_processed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log_path = os.path.join(directory, "access.json")
+            checkpoint_path = os.path.join(directory, "checkpoint.json")
+            with open(log_path, "w", encoding="utf-8") as handle:
+                handle.write(json.dumps({
+                    "RouterName": "jellyfin@docker",
+                    "ClientHost": None,
+                    "DownstreamContentSize": 99,
+                }) + "\n")
+                handle.write(json.dumps({
+                    "RouterName": "jellyfin@docker",
+                    "ClientHost": "203.0.113.8",
+                    "DownstreamContentSize": 10,
+                }) + "\n")
+            save_checkpoint(checkpoint_path, Checkpoint(os.stat(log_path).st_ino, 0))
+            state = MetricState()
+
+            self.assertEqual(
+                process_available(log_path, checkpoint_path, MappingCache(600), state, now=1000),
+                1,
+            )
+            self.assertEqual(state.access_log_errors, 1)
+            self.assertIn("jellyfin_egress_unattributed_bytes_total 10", state.render(0))
+
+    def test_unterminated_record_is_retried_after_its_remainder_arrives(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log_path = os.path.join(directory, "access.json")
+            checkpoint_path = os.path.join(directory, "checkpoint.json")
+            partial = '{"RouterName":"jellyfin@docker","ClientHost":"203.0.113.8",'
+            with open(log_path, "w", encoding="utf-8") as handle:
+                handle.write(partial)
+            save_checkpoint(checkpoint_path, Checkpoint(os.stat(log_path).st_ino, 0))
+            state = MetricState()
+            cache = MappingCache(600)
+
+            self.assertEqual(process_available(log_path, checkpoint_path, cache, state, now=1000), 0)
+            self.assertEqual(state.access_log_errors, 0)
+            with open(log_path, "a", encoding="utf-8") as handle:
+                handle.write('"DownstreamContentSize":7}\n')
+            self.assertEqual(process_available(log_path, checkpoint_path, cache, state, now=1001), 1)
+            self.assertIn("jellyfin_egress_unattributed_bytes_total 7", state.render(0))
+
+
+class SessionPollRegressionTests(unittest.TestCase):
+    def test_failed_poll_does_not_apply_any_partial_mapping_updates(self):
+        cache = MappingCache(600)
+        cache.observe_sessions([
+            {"UserName": "existing", "RemoteEndPoint": "203.0.113.9", "NowPlayingItem": {"Id": "old"}},
+        ], now=100)
+        runtime = Runtime(
+            Settings("http://jellyfin:8096", "secret", "/tmp/access", "/tmp/checkpoint", 600, 15, 0),
+            cache,
+            MetricState(),
+        )
+        sessions = [
+            {"UserName": "alice", "RemoteEndPoint": "203.0.113.8", "NowPlayingItem": {"Id": "new"}},
+            None,
+        ]
+
+        with patch("jellyfin_egress_exporter.fetch_sessions", return_value=sessions), \
+                patch("jellyfin_egress_exporter.time.sleep", side_effect=StopIteration):
+            with self.assertRaises(StopIteration):
+                poll_sessions_forever(runtime)
+
+        self.assertEqual(cache.lookup("203.0.113.9", now=101), "existing")
+        self.assertEqual(cache.lookup("203.0.113.8", now=101), "unknown")
+        self.assertEqual(runtime.state.api_failures, 1)

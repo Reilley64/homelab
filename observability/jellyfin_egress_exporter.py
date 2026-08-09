@@ -16,6 +16,8 @@ PUBLIC_ROUTER = "jellyfin@docker"
 
 
 def normalize_address(value: str) -> str | None:
+    if not isinstance(value, str):
+        return None
     candidate = value.strip()
     if not candidate:
         return None
@@ -111,15 +113,22 @@ class MappingCache:
         self._lock = threading.Lock()
 
     def observe_sessions(self, sessions: list[dict], now: float) -> None:
+        updates: dict[str, tuple[str, float, str]] = {}
+        for session in sessions:
+            if not isinstance(session, dict):
+                raise ValueError("Jellyfin session must be an object")
+            if not session.get("NowPlayingItem"):
+                continue
+            username = session.get("UserName")
+            remote_endpoint = session.get("RemoteEndPoint", "")
+            if not isinstance(remote_endpoint, str):
+                raise ValueError("Jellyfin RemoteEndPoint must be a string")
+            client_ip = normalize_address(remote_endpoint)
+            if isinstance(username, str) and username and client_ip:
+                session_id = str(session.get("Id", ""))
+                updates[client_ip] = (username, now, session_id)
         with self._lock:
-            for session in sessions:
-                if not session.get("NowPlayingItem"):
-                    continue
-                username = session.get("UserName")
-                client_ip = normalize_address(session.get("RemoteEndPoint", ""))
-                if isinstance(username, str) and username and client_ip:
-                    session_id = str(session.get("Id", ""))
-                    self._entries[client_ip] = (username, now, session_id)
+            self._entries.update(updates)
 
     def lookup(self, client_ip: str, now: float) -> str:
         with self._lock:
@@ -210,6 +219,8 @@ def process_available(
         while True:
             line = handle.readline()
             if not line:
+                break
+            if not line.endswith("\n"):
                 break
             try:
                 event = parse_access_line(line)
