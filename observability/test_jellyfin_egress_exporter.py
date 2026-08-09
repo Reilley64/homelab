@@ -36,6 +36,7 @@ class ParseAccessLineTests(unittest.TestCase):
             "RouterName": "jellyfin@docker",
             "ClientHost": "203.0.113.8",
             "DownstreamContentSize": 4096,
+            "time": "2026-08-09T20:14:40+10:00",
         }
         entry.update(overrides)
         return json.dumps(entry)
@@ -44,6 +45,28 @@ class ParseAccessLineTests(unittest.TestCase):
         event = parse_access_line(self.make_line())
         self.assertEqual(event.client_ip, "203.0.113.8")
         self.assertEqual(event.byte_count, 4096)
+
+    def test_returns_logger_time_as_epoch_seconds(self):
+        event = parse_access_line(self.make_line())
+        self.assertEqual(event.recorded_at, 1786270480.0)
+
+    def test_rejects_missing_naive_or_malformed_logger_time(self):
+        for value in (
+            None,
+            "2026-08-09T20:14:40",
+            "20260809T201440+1000",
+            "2026-08-09 20:14:40+10:00",
+            "2026-08-09T20:14:40+10",
+            "not-a-time",
+        ):
+            overrides = {} if value is None else {"time": value}
+            line = self.make_line(**overrides)
+            if value is None:
+                entry = json.loads(line)
+                del entry["time"]
+                line = json.dumps(entry)
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                parse_access_line(line)
 
     def test_ignores_lan_and_other_routers(self):
         self.assertIsNone(parse_access_line(self.make_line(RouterName="jellyfinlocal@docker")))
@@ -90,27 +113,40 @@ from jellyfin_egress_exporter import AccessEvent, MetricState
 
 
 class MetricStateTests(unittest.TestCase):
+    def test_renders_only_v2_attribution_metric_name(self):
+        state = MetricState()
+        state.apply(AccessEvent("203.0.113.8", 25, 1000.0), "alice")
+        rendered = state.render(active_mappings=1)
+        self.assertIn("jellyfin_user_egress_bytes_v2_total", rendered)
+        self.assertNotIn("jellyfin_user_egress_bytes_total{", rendered)
+
     def test_accumulates_by_user_and_ip(self):
         state = MetricState()
-        event = AccessEvent("203.0.113.8", 4096)
+        event = AccessEvent("203.0.113.8", 4096, 1000.0)
         state.apply(event, "alice")
         state.apply(event, "alice")
         rendered = state.render(active_mappings=1)
-        self.assertIn('jellyfin_user_egress_bytes_total{user="alice",client_ip="203.0.113.8"} 8192', rendered)
+        self.assertIn('jellyfin_user_egress_bytes_v2_total{user="alice",client_ip="203.0.113.8"} 8192', rendered)
         self.assertIn("jellyfin_egress_active_ip_mappings 1", rendered)
 
     def test_unknown_bytes_have_a_diagnostic_counter(self):
         state = MetricState()
-        state.apply(AccessEvent("203.0.113.9", 512), "unknown")
+        state.apply(AccessEvent("203.0.113.9", 512, 1000.0), "unknown")
         self.assertIn("jellyfin_egress_unattributed_bytes_total 512", state.render(active_mappings=0))
 
     def test_escapes_prometheus_label_values(self):
         state = MetricState()
-        state.apply(AccessEvent("203.0.113.8", 1), 'a"b\\c')
+        state.apply(AccessEvent("203.0.113.8", 1, 1000.0), 'a"b\\c')
         self.assertIn('user="a\\"b\\\\c"', state.render(active_mappings=1))
 
 
-from jellyfin_egress_exporter import Checkpoint, load_checkpoint, process_available, save_checkpoint
+from jellyfin_egress_exporter import (
+    Checkpoint,
+    checkpoint_anchor,
+    load_checkpoint,
+    process_available,
+    save_checkpoint,
+)
 
 
 class CheckpointTests(unittest.TestCase):
@@ -134,6 +170,30 @@ class CheckpointTests(unittest.TestCase):
 
 
 class TailerTests(unittest.TestCase):
+    def public_line(
+        self,
+        client_ip="203.0.113.8",
+        byte_count=25,
+        recorded_time="1970-01-01T00:16:40Z",
+    ):
+        return json.dumps({
+            "RouterName": "jellyfin@docker",
+            "ClientHost": client_ip,
+            "DownstreamContentSize": byte_count,
+            "time": recorded_time,
+        })
+
+    def save_anchored_checkpoint_at_start(self, log_path, checkpoint_path):
+        with open(log_path, "rb") as handle:
+            save_checkpoint(
+                checkpoint_path,
+                Checkpoint(
+                    os.fstat(handle.fileno()).st_ino,
+                    0,
+                    checkpoint_anchor(handle, 0),
+                ),
+            )
+
     def test_processes_new_lines_once_and_resumes_from_checkpoint(self):
         with tempfile.TemporaryDirectory() as directory:
             log_path = os.path.join(directory, "access.json")
@@ -142,6 +202,7 @@ class TailerTests(unittest.TestCase):
                 "RouterName": "jellyfin@docker",
                 "ClientHost": "203.0.113.8",
                 "DownstreamContentSize": 100,
+                "time": "1970-01-01T00:00:00Z",
             })
             with open(log_path, "w", encoding="utf-8") as handle:
                 handle.write(line + "\n")
@@ -168,6 +229,7 @@ class TailerTests(unittest.TestCase):
                     "RouterName": "jellyfin@docker",
                     "ClientHost": "203.0.113.8",
                     "DownstreamContentSize": 10,
+                    "time": "1970-01-01T00:00:00Z",
                 }) + "\n")
             save_checkpoint(
                 checkpoint_path,
@@ -190,6 +252,7 @@ class TailerTests(unittest.TestCase):
                     "RouterName": "jellyfin@docker",
                     "ClientHost": "203.0.113.8",
                     "DownstreamContentSize": 25,
+                    "time": "1970-01-01T00:00:00Z",
                 }) + "\n")
             state = MetricState()
             self.assertEqual(process_available(log_path, checkpoint_path, MappingCache(600), state, now=1001), 1)
@@ -208,6 +271,7 @@ class TailerTests(unittest.TestCase):
                 "RouterName": "jellyfin@docker",
                 "ClientHost": "203.0.113.8",
                 "DownstreamContentSize": 25,
+                "time": "1970-01-01T00:00:00Z",
             }) + "\n"
             ignored_record = json.dumps({"RouterName": "traefik@docker"}) + "\n"
             with open(log_path, "w", encoding="utf-8") as handle:
@@ -227,6 +291,7 @@ class TailerTests(unittest.TestCase):
                 "RouterName": "jellyfin@docker",
                 "ClientHost": "203.0.113.8",
                 "DownstreamContentSize": 25,
+                "time": "1970-01-01T00:00:00Z",
             }) + "\n"
             with open(log_path, "w", encoding="utf-8") as handle:
                 handle.write(event)
@@ -259,6 +324,7 @@ class TailerTests(unittest.TestCase):
                 "RouterName": "jellyfin@docker",
                 "ClientHost": "203.0.113.8",
                 "DownstreamContentSize": 100,
+                "time": "1970-01-01T00:00:00Z",
             })
             with open(log_path, "w", encoding="utf-8") as handle:
                 handle.write(existing + "\n")
@@ -269,6 +335,118 @@ class TailerTests(unittest.TestCase):
                 handle.write(existing.replace("100", "25") + "\n")
             self.assertEqual(process_available(log_path, checkpoint_path, cache, state, now=1001), 1)
             self.assertIn('} 25', state.render(active_mappings=0))
+
+    def test_recent_unmapped_record_is_not_processed_or_checkpointed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log_path = os.path.join(directory, "access.json")
+            checkpoint_path = os.path.join(directory, "checkpoint.json")
+            with open(log_path, "w", encoding="utf-8") as handle:
+                handle.write(self.public_line() + "\n")
+            self.save_anchored_checkpoint_at_start(log_path, checkpoint_path)
+            state = MetricState()
+
+            self.assertEqual(
+                process_available(log_path, checkpoint_path, MappingCache(600), state, now=1029),
+                0,
+            )
+            self.assertNotIn('user="unknown"', state.render(active_mappings=0))
+            self.assertEqual(load_checkpoint(checkpoint_path).offset, 0)
+
+    def test_delayed_record_is_attributed_when_mapping_arrives(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log_path = os.path.join(directory, "access.json")
+            checkpoint_path = os.path.join(directory, "checkpoint.json")
+            with open(log_path, "w", encoding="utf-8") as handle:
+                handle.write(self.public_line(byte_count=25) + "\n")
+            self.save_anchored_checkpoint_at_start(log_path, checkpoint_path)
+            cache = MappingCache(600)
+            state = MetricState()
+
+            self.assertEqual(process_available(log_path, checkpoint_path, cache, state, now=1001), 0)
+            cache.observe_sessions([
+                {"UserName": "alice", "RemoteEndPoint": "203.0.113.8", "NowPlayingItem": {"Id": "1"}},
+            ], now=1001)
+            self.assertEqual(process_available(log_path, checkpoint_path, cache, state, now=1002), 1)
+            self.assertIn(
+                'jellyfin_user_egress_bytes_v2_total{user="alice",client_ip="203.0.113.8"} 25',
+                state.render(active_mappings=1),
+            )
+
+    def test_unmapped_record_becomes_unknown_at_deadline(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log_path = os.path.join(directory, "access.json")
+            checkpoint_path = os.path.join(directory, "checkpoint.json")
+            with open(log_path, "w", encoding="utf-8") as handle:
+                handle.write(self.public_line(byte_count=25) + "\n")
+            self.save_anchored_checkpoint_at_start(log_path, checkpoint_path)
+            state = MetricState()
+
+            self.assertEqual(
+                process_available(log_path, checkpoint_path, MappingCache(600), state, now=1029),
+                0,
+            )
+            self.assertEqual(
+                process_available(log_path, checkpoint_path, MappingCache(600), state, now=1030),
+                1,
+            )
+            self.assertIn("jellyfin_egress_unattributed_bytes_total 25", state.render(0))
+            self.assertGreater(load_checkpoint(checkpoint_path).offset, 0)
+
+    def test_future_timestamp_is_counted_and_checkpointed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log_path = os.path.join(directory, "access.json")
+            checkpoint_path = os.path.join(directory, "checkpoint.json")
+            with open(log_path, "w", encoding="utf-8") as handle:
+                handle.write(self.public_line(recorded_time="1970-01-01T00:16:46Z") + "\n")
+            self.save_anchored_checkpoint_at_start(log_path, checkpoint_path)
+            state = MetricState()
+
+            self.assertEqual(
+                process_available(log_path, checkpoint_path, MappingCache(600), state, now=1000),
+                0,
+            )
+            self.assertEqual(state.access_log_errors, 1)
+            self.assertGreater(load_checkpoint(checkpoint_path).offset, 0)
+
+    def test_small_future_skew_is_deferred_from_age_zero(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log_path = os.path.join(directory, "access.json")
+            checkpoint_path = os.path.join(directory, "checkpoint.json")
+            with open(log_path, "w", encoding="utf-8") as handle:
+                handle.write(self.public_line(recorded_time="1970-01-01T00:16:45Z") + "\n")
+            self.save_anchored_checkpoint_at_start(log_path, checkpoint_path)
+            state = MetricState()
+
+            self.assertEqual(
+                process_available(log_path, checkpoint_path, MappingCache(600), state, now=1000),
+                0,
+            )
+            self.assertEqual(state.access_log_errors, 0)
+            self.assertEqual(load_checkpoint(checkpoint_path).offset, 0)
+
+    def test_delayed_record_survives_reentry_and_blocks_following_lines(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log_path = os.path.join(directory, "access.json")
+            checkpoint_path = os.path.join(directory, "checkpoint.json")
+            with open(log_path, "w", encoding="utf-8") as handle:
+                handle.write(self.public_line(client_ip="203.0.113.9", byte_count=10) + "\n")
+                handle.write(self.public_line(client_ip="203.0.113.8", byte_count=20) + "\n")
+            self.save_anchored_checkpoint_at_start(log_path, checkpoint_path)
+            cache = MappingCache(600)
+            cache.observe_sessions([
+                {"UserName": "alice", "RemoteEndPoint": "203.0.113.8", "NowPlayingItem": {"Id": "1"}},
+            ], now=1000)
+            state = MetricState()
+
+            self.assertEqual(process_available(log_path, checkpoint_path, cache, state, now=1001), 0)
+            self.assertEqual(load_checkpoint(checkpoint_path).offset, 0)
+            self.assertEqual(process_available(log_path, checkpoint_path, cache, state, now=1030), 2)
+            rendered = state.render(active_mappings=1)
+            self.assertIn(
+                'jellyfin_user_egress_bytes_v2_total{user="alice",client_ip="203.0.113.8"} 20',
+                rendered,
+            )
+            self.assertIn("jellyfin_egress_unattributed_bytes_total 10", rendered)
 
 
 from jellyfin_egress_exporter import fetch_sessions
@@ -369,6 +547,7 @@ class TailerRegressionTests(unittest.TestCase):
                     "RouterName": "jellyfin@docker",
                     "ClientHost": "203.0.113.8",
                     "DownstreamContentSize": 10,
+                    "time": "1970-01-01T00:00:00Z",
                 }) + "\n")
             save_checkpoint(checkpoint_path, Checkpoint(os.stat(log_path).st_ino, 0))
             state = MetricState()
@@ -394,7 +573,7 @@ class TailerRegressionTests(unittest.TestCase):
             self.assertEqual(process_available(log_path, checkpoint_path, cache, state, now=1000), 0)
             self.assertEqual(state.access_log_errors, 0)
             with open(log_path, "a", encoding="utf-8") as handle:
-                handle.write('"DownstreamContentSize":7}\n')
+                handle.write('"DownstreamContentSize":7,"time":"1970-01-01T00:00:00Z"}\n')
             self.assertEqual(process_available(log_path, checkpoint_path, cache, state, now=1001), 1)
             self.assertIn("jellyfin_egress_unattributed_bytes_total 7", state.render(0))
 

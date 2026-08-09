@@ -4,17 +4,21 @@ import hashlib
 import ipaddress
 import json
 import os
+import re
 import sys
 import threading
 import time
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib import request
 
 PUBLIC_ROUTER = "jellyfin@docker"
 CHECKPOINT_ANCHOR_BYTES = 64
+ATTRIBUTION_DELAY_SECONDS = 30
+MAX_FUTURE_SKEW_SECONDS = 5
 
 
 def normalize_address(value: str) -> str | None:
@@ -56,6 +60,7 @@ def _canonical_ip(value: str) -> str:
 class AccessEvent:
     client_ip: str
     byte_count: int
+    recorded_at: float
 
 
 @dataclass(frozen=True)
@@ -77,7 +82,28 @@ def parse_access_line(line: str) -> AccessEvent | None:
     client_ip = normalize_address(entry.get("ClientHost", ""))
     if client_ip is None:
         raise ValueError("ClientHost must be an IP address")
-    return AccessEvent(client_ip=client_ip, byte_count=byte_count)
+    return AccessEvent(
+        client_ip=client_ip,
+        byte_count=byte_count,
+        recorded_at=parse_recorded_at(entry.get("time")),
+    )
+
+
+def parse_recorded_at(value: object) -> float:
+    if not isinstance(value, str):
+        raise ValueError("time must be a timezone-aware RFC 3339 timestamp")
+    if not re.fullmatch(
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})",
+        value,
+    ):
+        raise ValueError("time must be a timezone-aware RFC 3339 timestamp")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise ValueError("time must be a timezone-aware RFC 3339 timestamp") from error
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("time must be a timezone-aware RFC 3339 timestamp")
+    return parsed.timestamp()
 
 
 def load_checkpoint(path: str) -> Checkpoint | None:
@@ -205,11 +231,11 @@ class MetricState:
     def render(self, active_mappings: int) -> str:
         with self._lock:
             lines = [
-                "# TYPE jellyfin_user_egress_bytes_total counter",
+                "# TYPE jellyfin_user_egress_bytes_v2_total counter",
             ]
             for (username, client_ip), value in sorted(self._egress.items()):
                 lines.append(
-                    'jellyfin_user_egress_bytes_total{user="%s",client_ip="%s"} %d'
+                    'jellyfin_user_egress_bytes_v2_total{user="%s",client_ip="%s"} %d'
                     % (_escape_label(username), _escape_label(client_ip), value)
                 )
             lines.extend([
@@ -264,6 +290,7 @@ def process_available(
         processed = 0
         handle.seek(start_offset)
         while True:
+            line_start = handle.tell()
             line = handle.readline()
             if not line:
                 break
@@ -272,7 +299,15 @@ def process_available(
             try:
                 event = parse_access_line(line.decode("utf-8"))
                 if event is not None:
-                    state.apply(event, cache.lookup(event.client_ip, now))
+                    age = now - event.recorded_at
+                    if age < -MAX_FUTURE_SKEW_SECONDS:
+                        raise ValueError("time is too far in the future")
+                    age = max(0.0, age)
+                    username = cache.lookup(event.client_ip, now)
+                    if username == "unknown" and age < ATTRIBUTION_DELAY_SECONDS:
+                        handle.seek(line_start)
+                        break
+                    state.apply(event, username)
                     processed += 1
             except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
                 state.access_log_errors += 1
