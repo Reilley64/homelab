@@ -32,6 +32,17 @@ module "traefik" {
     "--providers.docker=true",
     "--metrics.prometheus=true",
     "--metrics.prometheus.addRoutersLabels=true",
+    "--accesslog=true",
+    "--accesslog.filepath=/var/log/traefik/access.json",
+    "--accesslog.format=json",
+    "--accesslog.fields.defaultmode=drop",
+    "--accesslog.fields.names.StartUTC=keep",
+    "--accesslog.fields.names.RouterName=keep",
+    "--accesslog.fields.names.ClientHost=keep",
+    "--accesslog.fields.names.DownstreamContentSize=keep",
+    "--accesslog.fields.names.DownstreamStatus=keep",
+    "--accesslog.fields.headers.defaultmode=drop",
+    "--accesslog.fields.queryparameters.defaultmode=drop",
     "--entrypoints.web.address=:80",
     "--entrypoints.websecure.address=:443",
     "--certificatesresolvers.myresolver.acme.tlschallenge=true",
@@ -47,6 +58,10 @@ module "traefik" {
     {
       container_path = "/letsencrypt"
       host_path      = "/home/${var.username}/appdata/letsencrypt"
+    },
+    {
+      container_path = "/var/log/traefik"
+      host_path      = "/home/${var.username}/appdata/traefik/log"
     },
   ]
 }

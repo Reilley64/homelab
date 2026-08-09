@@ -30,6 +30,11 @@ variable "unifi_api_key" {
   sensitive = true
 }
 
+variable "jellyfin_api_key" {
+  type      = string
+  sensitive = true
+}
+
 variable "arcto_vaultwarden_admin_token" {
   type      = string
   sensitive = true
