@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -39,6 +40,53 @@ func TestRuntimeFailedPollIncrementsOnlyAPIFailureAndRetainsMappings(t *testing.
 	if got := runtime.cache.Lookup("192.0.2.10", now); got != "alice" {
 		t.Fatalf("mapping after failed poll = %q, want alice", got)
 	}
+	if !strings.Contains(logs.String(), "poll Jellyfin sessions") {
+		t.Fatalf("log = %q, want poll failure", logs.String())
+	}
+}
+
+func TestRuntimeNullSessionPollDoesNotApplyPartialMappings(t *testing.T) {
+	runtime, logs := newTestRuntime(t)
+	now := time.Date(2026, time.August, 11, 10, 0, 0, 0, time.UTC)
+	runtime.now = func() time.Time { return now }
+	if err := runtime.cache.ObserveSessions([]Session{{
+		ID:             "existing",
+		Username:       "existing",
+		RemoteEndpoint: "203.0.113.9",
+		NowPlaying:     true,
+	}}, now); err != nil {
+		t.Fatalf("seed mapping cache: %v", err)
+	}
+
+	client := JellyfinClient{
+		BaseURL: "http://jellyfin.test",
+		APIKey:  "secret",
+		HTTPClient: &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     make(http.Header),
+				Body:       io.NopCloser(strings.NewReader(`[{"Id":"new","UserName":"alice","RemoteEndPoint":"203.0.113.8","NowPlayingItem":{"Id":"item-1"}},null]`)),
+				Request:    request,
+			}, nil
+		})},
+	}
+	called := make(chan struct{}, 1)
+	runtime.fetchSessions = func(ctx context.Context) ([]Session, error) {
+		sessions, err := client.FetchSessions(ctx)
+		called <- struct{}{}
+		return sessions, err
+	}
+
+	runRuntimeUntilCalled(t, runtime, called)
+
+	if got := runtime.cache.Lookup("203.0.113.9", now); got != "existing" {
+		t.Errorf("Lookup(existing) = %q, want existing", got)
+	}
+	if got := runtime.cache.Lookup("203.0.113.8", now); got != "unknown" {
+		t.Errorf("Lookup(partial update) = %q, want unknown", got)
+	}
+	metrics := runtime.metrics.Render(runtime.cache.ActiveCount(now))
+	assertMetricValue(t, metrics, "jellyfin_egress_jellyfin_api_failures_total", "1")
 	if !strings.Contains(logs.String(), "poll Jellyfin sessions") {
 		t.Fatalf("log = %q, want poll failure", logs.String())
 	}
@@ -114,6 +162,37 @@ func TestRuntimeCancellationStopsIntervalLoopsPromptly(t *testing.T) {
 		}
 	case <-time.After(250 * time.Millisecond):
 		t.Fatal("Run() did not stop interval loops promptly after cancellation")
+	}
+}
+
+func TestRuntimeCancellationDuringPollIsNotAnAPIFailure(t *testing.T) {
+	runtime, logs := newTestRuntime(t)
+	started := make(chan struct{}, 1)
+	runtime.fetchSessions = func(ctx context.Context) ([]Session, error) {
+		started <- struct{}{}
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- runtime.Run(ctx) }()
+	waitForCall(t, started)
+	cancel()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("Run() after cancellation: %v", err)
+		}
+	case <-time.After(250 * time.Millisecond):
+		t.Fatal("Run() did not stop after canceling an in-flight poll")
+	}
+
+	metrics := runtime.metrics.Render(runtime.cache.ActiveCount(runtime.now()))
+	assertMetricValue(t, metrics, "jellyfin_egress_jellyfin_api_failures_total", "0")
+	if strings.Contains(logs.String(), "poll Jellyfin sessions") {
+		t.Fatalf("log = %q, want no poll failure during shutdown", logs.String())
 	}
 }
 

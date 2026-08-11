@@ -153,11 +153,10 @@ module "observability_agent" {
     context    = abspath("${path.module}/observability")
     dockerfile = "Dockerfile"
     triggers = {
-      source = sha256(join("", concat(
-        [filesha256("${path.module}/observability/go.mod")],
-        [filesha256("${path.module}/observability/Dockerfile")],
-        [for source_path in sort(fileset("${path.module}/observability", "**/*.go")) : filesha256("${path.module}/observability/${source_path}")],
-      )))
+      source = sha256(join("", [
+        for source_path in sort(concat(["Dockerfile", "go.mod"], tolist(fileset("${path.module}/observability", "**/*.go")))) :
+        "${source_path}:${filesha256("${path.module}/observability/${source_path}")}"
+      ]))
     }
   }
 

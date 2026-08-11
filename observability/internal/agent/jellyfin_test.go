@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -68,6 +69,41 @@ func TestJellyfinClientFetchSessions(t *testing.T) {
 	}}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("FetchSessions() = %#v, want %#v", got, want)
+	}
+}
+
+func TestSessionRejectsNonObjectJSON(t *testing.T) {
+	t.Parallel()
+
+	for _, input := range []string{"null", `[]`, `"session"`, `1`, `true`} {
+		var session Session
+		if err := json.Unmarshal([]byte(input), &session); err == nil {
+			t.Errorf("json.Unmarshal(%s) error = nil, want non-object error", input)
+		}
+	}
+}
+
+func TestJellyfinClientRejectsNullSessionElement(t *testing.T) {
+	t.Parallel()
+
+	client := JellyfinClient{
+		BaseURL: "http://jellyfin.test",
+		APIKey:  "secret",
+		HTTPClient: &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     make(http.Header),
+				Body:       io.NopCloser(strings.NewReader(`[{"Id":"new","UserName":"alice","RemoteEndPoint":"203.0.113.8","NowPlayingItem":{"Id":"item-1"}},null]`)),
+				Request:    request,
+			}, nil
+		})},
+	}
+	sessions, err := client.FetchSessions(context.Background())
+	if err == nil {
+		t.Fatal("FetchSessions() error = nil, want null-session error")
+	}
+	if sessions != nil {
+		t.Errorf("FetchSessions() sessions = %#v, want nil after invalid response", sessions)
 	}
 }
 

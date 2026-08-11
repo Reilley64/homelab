@@ -135,6 +135,9 @@ func (r *Runtime) runSessionPoller(ctx context.Context) error {
 			err = r.cache.ObserveSessions(sessions, r.now())
 		}
 		if err != nil {
+			if errors.Is(err, context.Canceled) && ctx.Err() != nil {
+				return
+			}
 			r.metrics.IncrementJellyfinAPIFailures()
 			r.logger.Printf("poll Jellyfin sessions: %v", err)
 		}

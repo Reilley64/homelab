@@ -132,3 +132,21 @@ func TestMetricsHandlerServesMetricsOnly(t *testing.T) {
 		t.Errorf("GET /metrics with query status = %d, want %d", query.Code, http.StatusNotFound)
 	}
 }
+
+func TestMetricsHandlerRejectsNoncanonicalPathsBeforeServeMuxRedirects(t *testing.T) {
+	t.Parallel()
+
+	handler := MetricsHandler(&MetricState{}, NewMappingCache(time.Hour), time.Now)
+	for _, target := range []string{"/x/../metrics", "/metrics//", "//metrics"} {
+		t.Run(target, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, target, nil))
+			if response.Code != http.StatusNotFound {
+				t.Errorf("GET %s status = %d, want %d", target, response.Code, http.StatusNotFound)
+			}
+			if got := response.Header().Get("Location"); got != "" {
+				t.Errorf("GET %s Location = %q, want no redirect", target, got)
+			}
+		})
+	}
+}

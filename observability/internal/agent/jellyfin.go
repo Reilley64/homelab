@@ -26,6 +26,10 @@ type Session struct {
 
 // UnmarshalJSON identifies active playback by a non-null NowPlayingItem.
 func (s *Session) UnmarshalJSON(data []byte) error {
+	if trimmed := bytes.TrimSpace(data); len(trimmed) == 0 || trimmed[0] != '{' {
+		return fmt.Errorf("Jellyfin session must be an object")
+	}
+
 	var wire struct {
 		ID             string           `json:"Id"`
 		Username       string           `json:"UserName"`

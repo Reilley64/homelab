@@ -122,12 +122,14 @@ func MetricsHandler(state *MetricState, cache *MappingCache, now func() time.Tim
 			http.Error(w, "Not Implemented", http.StatusNotImplemented)
 			return
 		}
+		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+		_, _ = w.Write([]byte(state.Render(cache.ActiveCount(now()))))
+	})
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI != "/metrics" {
 			http.NotFound(w, r)
 			return
 		}
-		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
-		_, _ = w.Write([]byte(state.Render(cache.ActiveCount(now()))))
+		mux.ServeHTTP(w, r)
 	})
-	return mux
 }
