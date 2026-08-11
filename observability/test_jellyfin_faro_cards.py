@@ -73,10 +73,48 @@ class FaroLatencyDashboardTests(unittest.TestCase):
         cls.dashboard = load_dashboard()
         cls.panels = {panel["id"]: panel for panel in cls.dashboard["panels"]}
 
-    def test_dashboard_keeps_fourteen_unique_panels(self):
+    def test_dashboard_keeps_exactly_the_six_useful_panels(self):
         ids = [panel["id"] for panel in self.dashboard["panels"]]
-        self.assertEqual(len(ids), 14)
-        self.assertEqual(len(set(ids)), 14)
+        self.assertEqual(ids, [1, 2, 8, 4, 9, 3])
+        self.assertEqual(len(ids), 6)
+        self.assertEqual(len(set(ids)), 6)
+
+    def test_http_status_cards_and_dedicated_code_queries_are_removed(self):
+        removed_ids = {5, 10, 11, 12, 13, 14, 15, 16}
+        removed_titles = {"200", "204", "302", "304", "404", "499", "502", "Other"}
+        self.assertTrue(removed_ids.isdisjoint(self.panels))
+        self.assertTrue(
+            removed_titles.isdisjoint(panel["title"] for panel in self.dashboard["panels"])
+        )
+        for panel in self.dashboard["panels"]:
+            for target in panel.get("targets", []):
+                self.assertNotRegex(target["expr"], r'code(?:=|!~)')
+
+    def test_retained_non_latency_panels_keep_exact_queries_and_types(self):
+        expected = {
+            1: (
+                "timeseries",
+                'sum(rate(traefik_router_responses_bytes_total{router="jellyfin@docker"}[$__rate_interval])) * 8',
+            ),
+            2: (
+                "stat",
+                'sum(increase(traefik_router_responses_bytes_total{router="jellyfin@docker"}[$__range]))',
+            ),
+            3: (
+                "timeseries",
+                'sum by (router) (rate(traefik_router_requests_total{router=~"jellyfin(local)?@docker"}[$__rate_interval]))',
+            ),
+            8: (
+                "table",
+                'sort_desc(sum by (user) (increase(jellyfin_user_egress_bytes_v2_total[$__range])))',
+            ),
+        }
+        for panel_id, (panel_type, expression) in expected.items():
+            with self.subTest(panel_id=panel_id):
+                panel = self.panels[panel_id]
+                self.assertEqual(panel["type"], panel_type)
+                self.assertEqual(len(panel["targets"]), 1)
+                self.assertEqual(panel["targets"][0]["expr"], expression)
 
     def test_latency_panels_use_business_text_and_exact_queries(self):
         expected = {
@@ -248,18 +286,10 @@ class FaroLatencyDashboardTests(unittest.TestCase):
         expected_grid = {
             4: {"h": 4, "w": 12, "x": 0, "y": 0},
             9: {"h": 4, "w": 12, "x": 12, "y": 0},
-            1: {"h": 9, "w": 16, "x": 0, "y": 4},
-            2: {"h": 9, "w": 8, "x": 16, "y": 4},
-            8: {"h": 5, "w": 12, "x": 0, "y": 13},
-            5: {"h": 5, "w": 3, "x": 0, "y": 18},
-            10: {"h": 5, "w": 3, "x": 3, "y": 18},
-            11: {"h": 5, "w": 3, "x": 6, "y": 18},
-            12: {"h": 5, "w": 3, "x": 9, "y": 18},
-            13: {"h": 5, "w": 3, "x": 12, "y": 18},
-            14: {"h": 5, "w": 3, "x": 15, "y": 18},
-            15: {"h": 5, "w": 3, "x": 18, "y": 18},
-            16: {"h": 5, "w": 3, "x": 21, "y": 18},
-            3: {"h": 8, "w": 24, "x": 0, "y": 23},
+            2: {"h": 6, "w": 6, "x": 0, "y": 4},
+            8: {"h": 6, "w": 18, "x": 6, "y": 4},
+            1: {"h": 10, "w": 24, "x": 0, "y": 10},
+            3: {"h": 10, "w": 24, "x": 0, "y": 20},
         }
         for panel_id, grid in expected_grid.items():
             self.assertEqual(self.panels[panel_id]["gridPos"], grid)
