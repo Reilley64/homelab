@@ -107,7 +107,7 @@ class FaroLatencyDashboardTests(unittest.TestCase):
         expected = [
             {
                 "quality": "warning",
-                "position": "30%",
+                "position": "50%",
                 "valueText": "1.50 s",
                 "qualityText": "(Needs improvement)",
             },
@@ -136,13 +136,11 @@ class FaroLatencyDashboardTests(unittest.TestCase):
         expected = [
             {
                 "quality": "good",
-                "position": "19.992%",
                 "valueText": "999 ms",
                 "qualityText": "(Good)",
             },
             {
                 "quality": "warning",
-                "position": "39.980000000000004%",
                 "valueText": "1.99 s",
                 "qualityText": "(Needs improvement)",
             },
@@ -153,43 +151,68 @@ class FaroLatencyDashboardTests(unittest.TestCase):
                     self.panels[panel_id]["options"]["afterRender"],
                     [0.9996, 1.999],
                 )
-                self.assertEqual(states, expected)
+                for state, expected_state in zip(states, expected):
+                    self.assertEqual(
+                        {key: state[key] for key in expected_state}, expected_state
+                    )
+                self.assertAlmostEqual(
+                    float(states[0]["position"].removesuffix("%")), 33.32
+                )
+                self.assertAlmostEqual(
+                    float(states[1]["position"].removesuffix("%")), 66.63333333333333
+                )
 
-    def test_latency_cards_contain_faro_value_meter_and_indicators(self):
+    def test_latency_pointer_uses_zero_to_three_second_clamped_scale(self):
+        for panel_id in (4, 9):
+            with self.subTest(panel_id=panel_id):
+                states = run_after_render(
+                    self.panels[panel_id]["options"]["afterRender"],
+                    [0, 1.5, 3, 4, None],
+                )
+                self.assertEqual(
+                    [state["position"] for state in states],
+                    ["0%", "50%", "100%", "100%", "0%"],
+                )
+                self.assertEqual(
+                    [state["quality"] for state in states],
+                    ["good", "warning", "poor", "poor", None],
+                )
+
+    def test_latency_cards_use_three_exclusive_threshold_zones(self):
         required_content = (
-            "jf-latency-value",
-            "jf-latency-quality",
-            "jf-latency-meter__fill",
+            "jf-latency-zone--good",
+            "jf-latency-zone--warning",
+            "jf-latency-zone--poor",
             "jf-latency-meter__pointer",
             "jf-latency-tick--one",
             "jf-latency-tick--two",
-            "1 s",
-            "2 s",
         )
-        required_logic = (
-            "context.data?.Value",
-            "typeof raw === 'number'",
-            "seconds < 1",
-            "seconds < 2",
-            "Needs improvement",
-            "Math.min(5, Math.max(0, seconds)) / 5 * 100",
-            "--latency-position",
+        required_styles = (
+            ".jf-latency-meter__track {",
+            "display: flex",
+            ".jf-latency-zone {",
+            "background: var(--neutral-zone)",
+            "flex: 1 1 33.333333%",
+            '[data-quality="good"] .jf-latency-zone--good { background: var(--good); }',
+            '[data-quality="warning"] .jf-latency-zone--warning { background: var(--warning); }',
+            '[data-quality="poor"] .jf-latency-zone--poor { background: var(--poor); }',
+            "border-top: 7px solid var(--pointer)",
+            ".jf-latency-tick--one { left: 33.333333%; }",
+            ".jf-latency-tick--two { left: 66.666667%; }",
         )
         for panel_id in (4, 9):
             with self.subTest(panel_id=panel_id):
                 options = self.panels[panel_id]["options"]
-                self.assertEqual(options["renderMode"], "everyRow")
-                self.assertFalse(options["wrap"])
-                self.assertEqual(options["externalStyles"], [])
-                self.assertEqual(options["contentPartials"], [])
                 for token in required_content:
                     self.assertIn(token, options["content"])
-                for token in required_logic:
-                    self.assertIn(token, options["afterRender"])
-                self.assertIn("No data", options["defaultContent"])
-                self.assertIn("--good: rgb(115, 191, 105)", options["styles"])
-                self.assertIn("--warning: rgb(255, 152, 48)", options["styles"])
-                self.assertIn("--poor: rgb(242, 73, 92)", options["styles"])
+                    self.assertIn(token, options["defaultContent"])
+                for token in required_styles:
+                    self.assertIn(token, options["styles"])
+                self.assertNotIn("jf-latency-meter__fill", options["content"])
+                self.assertIn(
+                    "Math.min(3, Math.max(0, seconds)) / 3 * 100",
+                    options["afterRender"],
+                )
 
     def test_template_escapes_javascript_interpolations_and_preserves_them_rendered(self):
         source = DASHBOARD_TEMPLATE.read_text()
@@ -215,18 +238,20 @@ class FaroLatencyDashboardTests(unittest.TestCase):
 
     def test_compact_grid_has_no_overlap(self):
         expected_grid = {
-            8: {"h": 5, "w": 12, "x": 0, "y": 9},
-            4: {"h": 5, "w": 6, "x": 12, "y": 9},
-            9: {"h": 5, "w": 6, "x": 18, "y": 9},
-            5: {"h": 5, "w": 3, "x": 0, "y": 14},
-            10: {"h": 5, "w": 3, "x": 3, "y": 14},
-            11: {"h": 5, "w": 3, "x": 6, "y": 14},
-            12: {"h": 5, "w": 3, "x": 9, "y": 14},
-            13: {"h": 5, "w": 3, "x": 12, "y": 14},
-            14: {"h": 5, "w": 3, "x": 15, "y": 14},
-            15: {"h": 5, "w": 3, "x": 18, "y": 14},
-            16: {"h": 5, "w": 3, "x": 21, "y": 14},
-            3: {"h": 8, "w": 24, "x": 0, "y": 19},
+            4: {"h": 4, "w": 12, "x": 0, "y": 0},
+            9: {"h": 4, "w": 12, "x": 12, "y": 0},
+            1: {"h": 9, "w": 16, "x": 0, "y": 4},
+            2: {"h": 9, "w": 8, "x": 16, "y": 4},
+            8: {"h": 5, "w": 12, "x": 0, "y": 13},
+            5: {"h": 5, "w": 3, "x": 0, "y": 18},
+            10: {"h": 5, "w": 3, "x": 3, "y": 18},
+            11: {"h": 5, "w": 3, "x": 6, "y": 18},
+            12: {"h": 5, "w": 3, "x": 9, "y": 18},
+            13: {"h": 5, "w": 3, "x": 12, "y": 18},
+            14: {"h": 5, "w": 3, "x": 15, "y": 18},
+            15: {"h": 5, "w": 3, "x": 18, "y": 18},
+            16: {"h": 5, "w": 3, "x": 21, "y": 18},
+            3: {"h": 8, "w": 24, "x": 0, "y": 23},
         }
         for panel_id, grid in expected_grid.items():
             self.assertEqual(self.panels[panel_id]["gridPos"], grid)
