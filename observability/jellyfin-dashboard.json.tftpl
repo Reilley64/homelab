@@ -54,7 +54,7 @@
       "type": "table",
       "title": "Egress by user",
       "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
-      "gridPos": { "h": 8, "w": 10, "x": 0, "y": 9 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
       "fieldConfig": {
         "defaults": {},
         "overrides": [
@@ -89,29 +89,39 @@
     },
     {
       "id": 4,
-      "type": "stat",
-      "title": "Request latency",
+      "type": "bargauge",
+      "title": "p95 latency",
       "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
-      "gridPos": { "h": 8, "w": 6, "x": 10, "y": 9 },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 9 },
       "fieldConfig": {
-        "defaults": { "unit": "s", "min": 0 },
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "max": 5,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 2 }
+            ]
+          }
+        },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "graphMode": "none"
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }
       },
       "targets": [
         {
           "refId": "A",
           "expr": "histogram_quantile(0.95, sum by (le) (increase(traefik_router_request_duration_seconds_bucket{router=\"jellyfin@docker\"}[$__range])))",
-          "legendFormat": "p95",
-          "instant": true
-        },
-        {
-          "refId": "B",
-          "expr": "histogram_quantile(0.99, sum by (le) (increase(traefik_router_request_duration_seconds_bucket{router=\"jellyfin@docker\"}[$__range])))",
-          "legendFormat": "p99",
           "instant": true
         }
       ]
@@ -119,32 +129,142 @@
     {
       "id": 5,
       "type": "stat",
-      "title": "Status codes",
+      "title": "200",
       "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 9 },
+      "gridPos": { "h": 5, "w": 3, "x": 0, "y": 17 },
       "fieldConfig": {
         "defaults": { "unit": "short", "min": 0 },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "graphMode": "none"
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "graphMode": "none",
+        "colorMode": "value",
+        "textMode": "value"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (code) (increase(traefik_router_requests_total{router=\"jellyfin@docker\"}[$__range]))",
-          "legendFormat": "{{code}}",
+          "expr": "sum(increase(traefik_router_requests_total{router=\"jellyfin@docker\",code=\"200\"}[$__range])) or vector(0)",
           "instant": true
         }
       ]
+    },
+    {
+      "id": 9,
+      "type": "bargauge",
+      "title": "p99 latency",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "max": 5,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 2 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum by (le) (increase(traefik_router_request_duration_seconds_bucket{router=\"jellyfin@docker\"}[$__range])))",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "204",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 5, "w": 3, "x": 3, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "graphMode": "none", "colorMode": "value", "textMode": "value" },
+      "targets": [{ "refId": "A", "expr": "sum(increase(traefik_router_requests_total{router=\"jellyfin@docker\",code=\"204\"}[$__range])) or vector(0)", "instant": true }]
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "302",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 5, "w": 3, "x": 6, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "graphMode": "none", "colorMode": "value", "textMode": "value" },
+      "targets": [{ "refId": "A", "expr": "sum(increase(traefik_router_requests_total{router=\"jellyfin@docker\",code=\"302\"}[$__range])) or vector(0)", "instant": true }]
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "304",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 5, "w": 3, "x": 9, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "graphMode": "none", "colorMode": "value", "textMode": "value" },
+      "targets": [{ "refId": "A", "expr": "sum(increase(traefik_router_requests_total{router=\"jellyfin@docker\",code=\"304\"}[$__range])) or vector(0)", "instant": true }]
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "404",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 5, "w": 3, "x": 12, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "graphMode": "none", "colorMode": "value", "textMode": "value" },
+      "targets": [{ "refId": "A", "expr": "sum(increase(traefik_router_requests_total{router=\"jellyfin@docker\",code=\"404\"}[$__range])) or vector(0)", "instant": true }]
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "499",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 5, "w": 3, "x": 15, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "graphMode": "none", "colorMode": "value", "textMode": "value" },
+      "targets": [{ "refId": "A", "expr": "sum(increase(traefik_router_requests_total{router=\"jellyfin@docker\",code=\"499\"}[$__range])) or vector(0)", "instant": true }]
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "502",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 5, "w": 3, "x": 18, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "graphMode": "none", "colorMode": "value", "textMode": "value" },
+      "targets": [{ "refId": "A", "expr": "sum(increase(traefik_router_requests_total{router=\"jellyfin@docker\",code=\"502\"}[$__range])) or vector(0)", "instant": true }]
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "Other",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 5, "w": 3, "x": 21, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "graphMode": "none", "colorMode": "value", "textMode": "value" },
+      "targets": [{ "refId": "A", "expr": "sum(increase(traefik_router_requests_total{router=\"jellyfin@docker\",code!~\"200|204|302|304|404|499|502\"}[$__range])) or vector(0)", "instant": true }]
     },
     {
       "id": 3,
       "type": "timeseries",
       "title": "Request rate, public vs LAN",
       "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 22 },
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
