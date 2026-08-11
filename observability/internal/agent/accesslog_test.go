@@ -134,6 +134,8 @@ func TestParseAccessLineRejectsTimestampValuesPythonWouldReject(t *testing.T) {
 		"0000-08-09T20:14:40Z",
 		"2026-08-09T20:14:40+24:00",
 		"2026-08-09T20:14:40-24:00",
+		"2026-08-09T20:14:40+23:60",
+		"2026-08-09T20:14:40-23:60",
 	} {
 		t.Run(timestamp, func(t *testing.T) {
 			_, err := ParseAccessLine(accessLine(t, map[string]any{"time": timestamp}))

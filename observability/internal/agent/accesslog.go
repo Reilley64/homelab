@@ -92,5 +92,6 @@ func validRFC3339Timestamp(value string) bool {
 		return true
 	}
 	offsetHour, _ := strconv.Atoi(value[len(value)-5 : len(value)-3])
-	return offsetHour < 24
+	offsetMinute, _ := strconv.Atoi(value[len(value)-2:])
+	return offsetMinute < 60 && offsetHour*60+offsetMinute < 24*60
 }
