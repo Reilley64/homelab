@@ -158,6 +158,27 @@ func TestParseAccessLineAcceptsNearBoundaryTimezoneOffset(t *testing.T) {
 	}
 }
 
+func TestParseAccessLineAcceptsPythonNoncanonicalTimezoneOffsets(t *testing.T) {
+	t.Parallel()
+
+	for _, timestamp := range []string{
+		"2026-08-09T20:14:40+00:60",
+		"2026-08-09T20:14:40+10:99",
+		"2026-08-09T20:14:40+22:99",
+		"2026-08-09T20:14:40-10:99",
+	} {
+		t.Run(timestamp, func(t *testing.T) {
+			event, err := ParseAccessLine(accessLine(t, map[string]any{"time": timestamp}))
+			if err != nil {
+				t.Fatalf("ParseAccessLine() error = %v", err)
+			}
+			if event == nil {
+				t.Fatal("ParseAccessLine() = nil, want event")
+			}
+		})
+	}
+}
+
 func accessLine(t *testing.T, overrides map[string]any) []byte {
 	t.Helper()
 	entry := map[string]any{

@@ -74,24 +74,32 @@ func parseClientHost(raw json.RawMessage) (string, error) {
 
 func parseRecordedAt(raw json.RawMessage) (time.Time, error) {
 	var value string
-	if len(raw) == 0 || json.Unmarshal(raw, &value) != nil || !rfc3339Timestamp.MatchString(value) || !validRFC3339Timestamp(value) {
+	if len(raw) == 0 || json.Unmarshal(raw, &value) != nil || !rfc3339Timestamp.MatchString(value) {
 		return time.Time{}, fmt.Errorf("time must be a timezone-aware RFC 3339 timestamp")
 	}
-	parsed, err := time.Parse(time.RFC3339Nano, value)
+	normalized, ok := normalizeRFC3339Timestamp(value)
+	if !ok {
+		return time.Time{}, fmt.Errorf("time must be a timezone-aware RFC 3339 timestamp")
+	}
+	parsed, err := time.Parse(time.RFC3339Nano, normalized)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("time must be a timezone-aware RFC 3339 timestamp")
 	}
 	return parsed, nil
 }
 
-func validRFC3339Timestamp(value string) bool {
+func normalizeRFC3339Timestamp(value string) (string, bool) {
 	if value[:4] == "0000" {
-		return false
+		return "", false
 	}
 	if value[len(value)-1] == 'Z' {
-		return true
+		return value, true
 	}
 	offsetHour, _ := strconv.Atoi(value[len(value)-5 : len(value)-3])
 	offsetMinute, _ := strconv.Atoi(value[len(value)-2:])
-	return offsetMinute < 60 && offsetHour*60+offsetMinute < 24*60
+	offsetTotalMinutes := offsetHour*60 + offsetMinute
+	if offsetTotalMinutes >= 24*60 {
+		return "", false
+	}
+	return fmt.Sprintf("%s%c%02d:%02d", value[:len(value)-6], value[len(value)-6], offsetTotalMinutes/60, offsetTotalMinutes%60), true
 }
