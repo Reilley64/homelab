@@ -119,4 +119,16 @@ func TestMetricsHandlerServesMetricsOnly(t *testing.T) {
 	if health.Code != http.StatusNotFound {
 		t.Errorf("/health status = %d, want %d", health.Code, http.StatusNotFound)
 	}
+
+	post := httptest.NewRecorder()
+	handler.ServeHTTP(post, httptest.NewRequest(http.MethodPost, "/metrics", nil))
+	if post.Code != http.StatusNotImplemented {
+		t.Errorf("POST /metrics status = %d, want %d", post.Code, http.StatusNotImplemented)
+	}
+
+	query := httptest.NewRecorder()
+	handler.ServeHTTP(query, httptest.NewRequest(http.MethodGet, "/metrics?format=prometheus", nil))
+	if query.Code != http.StatusNotFound {
+		t.Errorf("GET /metrics with query status = %d, want %d", query.Code, http.StatusNotFound)
+	}
 }

@@ -118,6 +118,14 @@ func escapePrometheusLabel(value string) string {
 func MetricsHandler(state *MetricState, cache *MappingCache, now func() time.Time) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Not Implemented", http.StatusNotImplemented)
+			return
+		}
+		if r.RequestURI != "/metrics" {
+			http.NotFound(w, r)
+			return
+		}
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 		_, _ = w.Write([]byte(state.Render(cache.ActiveCount(now()))))
 	})
