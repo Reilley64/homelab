@@ -74,7 +74,7 @@ func parseClientHost(raw json.RawMessage) (string, error) {
 
 func parseRecordedAt(raw json.RawMessage) (time.Time, error) {
 	var value string
-	if len(raw) == 0 || json.Unmarshal(raw, &value) != nil || !rfc3339Timestamp.MatchString(value) {
+	if len(raw) == 0 || json.Unmarshal(raw, &value) != nil || !rfc3339Timestamp.MatchString(value) || !validRFC3339Timestamp(value) {
 		return time.Time{}, fmt.Errorf("time must be a timezone-aware RFC 3339 timestamp")
 	}
 	parsed, err := time.Parse(time.RFC3339Nano, value)
@@ -82,4 +82,15 @@ func parseRecordedAt(raw json.RawMessage) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("time must be a timezone-aware RFC 3339 timestamp")
 	}
 	return parsed, nil
+}
+
+func validRFC3339Timestamp(value string) bool {
+	if value[:4] == "0000" {
+		return false
+	}
+	if value[len(value)-1] == 'Z' {
+		return true
+	}
+	offsetHour, _ := strconv.Atoi(value[len(value)-5 : len(value)-3])
+	return offsetHour < 24
 }

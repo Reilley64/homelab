@@ -127,6 +127,35 @@ func TestParseAccessLineRejectsMalformedJSONAndTimestampShapes(t *testing.T) {
 	}
 }
 
+func TestParseAccessLineRejectsTimestampValuesPythonWouldReject(t *testing.T) {
+	t.Parallel()
+
+	for _, timestamp := range []string{
+		"0000-08-09T20:14:40Z",
+		"2026-08-09T20:14:40+24:00",
+		"2026-08-09T20:14:40-24:00",
+	} {
+		t.Run(timestamp, func(t *testing.T) {
+			_, err := ParseAccessLine(accessLine(t, map[string]any{"time": timestamp}))
+			if err == nil {
+				t.Fatalf("ParseAccessLine(%q) error = nil, want invalid timestamp", timestamp)
+			}
+		})
+	}
+}
+
+func TestParseAccessLineAcceptsNearBoundaryTimezoneOffset(t *testing.T) {
+	t.Parallel()
+
+	event, err := ParseAccessLine(accessLine(t, map[string]any{"time": "2026-08-09T20:14:40+23:59"}))
+	if err != nil {
+		t.Fatalf("ParseAccessLine() error = %v", err)
+	}
+	if event == nil {
+		t.Fatal("ParseAccessLine() = nil, want event")
+	}
+}
+
 func accessLine(t *testing.T, overrides map[string]any) []byte {
 	t.Helper()
 	entry := map[string]any{
