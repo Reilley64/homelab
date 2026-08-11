@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -90,6 +91,28 @@ class FaroLatencyDashboardTests(unittest.TestCase):
                 self.assertIn("--good: rgb(115, 191, 105)", options["styles"])
                 self.assertIn("--warning: rgb(255, 152, 48)", options["styles"])
                 self.assertIn("--poor: rgb(242, 73, 92)", options["styles"])
+
+    def test_template_escapes_javascript_interpolations_and_preserves_them_rendered(self):
+        source = DASHBOARD_TEMPLATE.read_text()
+        raw_interpolations = re.findall(r"(?<!\$)\$\{([^}]+)\}", source)
+        self.assertGreater(len(raw_interpolations), 0)
+        self.assertTrue(all(expression == "datasource_uid" for expression in raw_interpolations))
+
+        rendered = source.replace("$${", "${").replace(
+            "${datasource_uid}", "test-prometheus"
+        )
+        dashboard = json.loads(rendered)
+        expected_literals = (
+            "${Math.round(seconds * 1000)} ms",
+            "${seconds.toFixed(seconds < 10 ? 2 : 1)} s",
+            "${position}%",
+            "(${label})",
+        )
+        for panel in dashboard["panels"]:
+            if panel["id"] in (4, 9):
+                with self.subTest(panel_id=panel["id"]):
+                    for literal in expected_literals:
+                        self.assertIn(literal, panel["options"]["afterRender"])
 
     def test_compact_grid_has_no_overlap(self):
         expected_grid = {
