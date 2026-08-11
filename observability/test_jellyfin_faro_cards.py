@@ -132,6 +132,14 @@ class FaroLatencyDashboardTests(unittest.TestCase):
                 self.assertIn("jf-latency-value", default_content)
                 self.assertIn("jf-latency-quality", default_content)
 
+    def test_latency_quality_has_a_visible_gap_from_the_value(self):
+        for panel_id in (4, 9):
+            with self.subTest(panel_id=panel_id):
+                self.assertIn(
+                    ".jf-latency-quality { font-size: 13px; font-weight: 400; margin-left: 0.25em; }",
+                    self.panels[panel_id]["options"]["styles"],
+                )
+
     def test_threshold_adjacent_display_does_not_cross_quality_boundary(self):
         expected = [
             {
