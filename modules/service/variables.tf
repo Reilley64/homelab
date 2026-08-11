@@ -11,6 +11,16 @@ variable "image" {
   type = string
 }
 
+variable "build" {
+  type = object({
+    context    = string
+    dockerfile = optional(string, "Dockerfile")
+    triggers   = optional(map(string), {})
+  })
+  default     = null
+  description = "Build this image from a local context instead of pulling it from a registry."
+}
+
 # --- routing ---
 
 variable "domain" {

@@ -36,13 +36,24 @@ locals {
 }
 
 data "docker_registry_image" "image" {
+  count = var.build == null ? 1 : 0
+
   name = var.image
 }
 
 resource "docker_image" "image" {
-  name          = data.docker_registry_image.image.name
-  pull_triggers = [data.docker_registry_image.image.sha256_digest]
+  name          = var.image
+  pull_triggers = var.build == null ? [data.docker_registry_image.image[0].sha256_digest] : null
+  triggers      = var.build == null ? null : var.build.triggers
   keep_locally  = false
+
+  dynamic "build" {
+    for_each = var.build == null ? [] : [var.build]
+    content {
+      context    = build.value.context
+      dockerfile = build.value.dockerfile
+    }
+  }
 }
 
 resource "docker_container" "container" {

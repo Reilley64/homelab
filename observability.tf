@@ -141,13 +141,25 @@ module "alloy" {
   ]
 }
 
-module "jellyfin_egress_exporter" {
+module "observability_agent" {
   source = "./modules/service"
 
   domain   = var.domain
-  name     = "jellyfin-egress-exporter"
-  image    = "python:3.13-alpine"
+  name     = "observability-agent"
+  image    = "observability-agent"
   networks = [docker_network.media.id, docker_network.observability.id]
+
+  build = {
+    context    = abspath("${path.module}/observability")
+    dockerfile = "Dockerfile"
+    triggers = {
+      source = sha256(join("", concat(
+        [filesha256("${path.module}/observability/go.mod")],
+        [filesha256("${path.module}/observability/Dockerfile")],
+        [for source_path in sort(fileset("${path.module}/observability", "**/*.go")) : filesha256("${path.module}/observability/${source_path}")],
+      )))
+    }
+  }
 
   env = concat(local.shared_env, [
     "JELLYFIN_URL=http://jellyfin:8096",
@@ -157,54 +169,21 @@ module "jellyfin_egress_exporter" {
     "MAPPING_TTL_SECONDS=600",
     "SESSION_POLL_SECONDS=15",
     "METRICS_PORT=9101",
+    "LOG_MAX_BYTES=104857600",
+    "LOG_COPIES=7",
+    "ROTATION_CHECK_SECONDS=60",
   ])
-
-  command = ["python", "/usr/local/bin/jellyfin-egress-exporter.py"]
-
-  uploads = [{
-    file    = "/usr/local/bin/jellyfin-egress-exporter.py"
-    content = file("${path.module}/observability/jellyfin_egress_exporter.py")
-  }]
 
   volumes = [
     {
       container_path = "/logs"
       host_path      = "/home/${var.username}/appdata/traefik/log"
-      read_only      = true
     },
     {
       container_path = "/state"
       host_path      = "/home/${var.username}/appdata/jellyfin-egress-exporter"
     },
   ]
-}
-
-module "traefik_access_log_rotator" {
-  source = "./modules/service"
-
-  domain   = var.domain
-  name     = "traefik-access-log-rotator"
-  image    = "python:3.13-alpine"
-  networks = []
-
-  env = concat(local.shared_env, [
-    "ACCESS_LOG_PATH=/logs/access.json",
-    "LOG_MAX_BYTES=104857600",
-    "LOG_COPIES=7",
-    "ROTATION_CHECK_SECONDS=60",
-  ])
-
-  command = ["python", "/usr/local/bin/traefik-access-log-rotator.py"]
-
-  uploads = [{
-    file    = "/usr/local/bin/traefik-access-log-rotator.py"
-    content = file("${path.module}/observability/traefik_access_log_rotator.py")
-  }]
-
-  volumes = [{
-    container_path = "/logs"
-    host_path      = "/home/${var.username}/appdata/traefik/log"
-  }]
 }
 
 module "grafana" {
