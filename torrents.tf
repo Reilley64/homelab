@@ -6,6 +6,7 @@ resource "docker_network" "torrents" {
 module "gluetun" {
   source = "./modules/service"
 
+  domain     = var.domain
   name       = "gluetun"
   image      = "qmcgaw/gluetun:latest"
   route_name = "qbittorrent"
@@ -43,6 +44,7 @@ module "gluetun" {
 module "qbittorrent" {
   source = "./modules/service"
 
+  domain  = var.domain
   name    = "qbittorrent"
   image   = "linuxserver/qbittorrent:5.2.3"
   forward = "container:${module.gluetun.id}"

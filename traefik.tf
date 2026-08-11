@@ -6,6 +6,7 @@ resource "docker_network" "traefik" {
 module "traefik" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "traefik"
   image    = "traefik:latest"
   networks = [docker_network.traefik.id]

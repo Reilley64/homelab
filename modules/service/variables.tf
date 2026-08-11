@@ -13,6 +13,10 @@ variable "image" {
 
 # --- routing ---
 
+variable "domain" {
+  type = string
+}
+
 variable "route_name" {
   type        = string
   default     = null

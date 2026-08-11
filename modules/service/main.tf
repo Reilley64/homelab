@@ -1,6 +1,6 @@
 locals {
   route          = coalesce(var.route_name, var.name)
-  hostname       = "${local.route}.example.invalid"
+  hostname       = "${local.route}.${var.domain}"
   local_hostname = "${local.route}.localdomain"
 
   base_labels = {
@@ -122,7 +122,7 @@ resource "cloudflare_dns_record" "dns" {
   name    = local.route
   ttl     = 1
   type    = "CNAME"
-  content = "app.example.invalid"
+  content = "app.${var.domain}"
   comment = "managed by terraform"
 }
 

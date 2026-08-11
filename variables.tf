@@ -1,3 +1,7 @@
+variable "domain" {
+  type = string
+}
+
 variable "uid" {
   type = string
 }

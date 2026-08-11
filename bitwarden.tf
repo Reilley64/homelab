@@ -1,6 +1,7 @@
 module "bitwarden" {
   source = "./modules/service"
 
+  domain             = var.domain
   name               = "bitwarden"
   image              = "vaultwarden/server:latest"
   port               = 80
@@ -8,7 +9,9 @@ module "bitwarden" {
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
   networks           = [docker_network.traefik.id]
 
-  env = local.shared_env
+  env = concat(local.shared_env, [
+    "DOMAIN=https://bitwarden.${var.domain}"
+  ])
 
   command = [
     "/start.sh"

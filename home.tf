@@ -16,7 +16,7 @@ resource "docker_container" "homeassistant" {
 
   labels {
     label = "traefik.http.routers.homeassistant.rule"
-    value = "Host(`homeassistant.example.invalid`)"
+    value = "Host(`homeassistant.${var.domain}`)"
   }
 
   labels {
@@ -43,6 +43,7 @@ resource "docker_container" "homeassistant" {
 module "piper" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "piper"
   image    = "rhasspy/wyoming-piper:2.1.2"
   port     = 10200
@@ -72,6 +73,7 @@ module "piper" {
 module "whisper" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "whisper"
   image    = "rhasspy/wyoming-whisper:3.0.2"
   networks = [docker_network.home.id]

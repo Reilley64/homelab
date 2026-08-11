@@ -6,6 +6,7 @@ resource "docker_network" "observability" {
 module "node_exporter" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "node-exporter"
   image    = "prom/node-exporter:latest"
   networks = [docker_network.observability.id]
@@ -41,6 +42,7 @@ module "node_exporter" {
 module "prometheus" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "prometheus"
   image    = "prom/prometheus:latest"
   port     = 9090
@@ -72,6 +74,7 @@ module "prometheus" {
 module "loki" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "loki"
   image    = "grafana/loki:latest"
   port     = 3100
@@ -102,6 +105,7 @@ module "loki" {
 module "alloy" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "alloy"
   image    = "grafana/alloy:latest"
   networks = [docker_network.observability.id]
@@ -140,6 +144,7 @@ module "alloy" {
 module "jellyfin_egress_exporter" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "jellyfin-egress-exporter"
   image    = "python:3.13-alpine"
   networks = [docker_network.media.id, docker_network.observability.id]
@@ -177,6 +182,7 @@ module "jellyfin_egress_exporter" {
 module "traefik_access_log_rotator" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "traefik-access-log-rotator"
   image    = "python:3.13-alpine"
   networks = []
@@ -204,6 +210,7 @@ module "traefik_access_log_rotator" {
 module "grafana" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "grafana"
   image    = "grafana/grafana:latest"
   port     = 3000

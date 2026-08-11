@@ -13,6 +13,7 @@ locals {
 module "immich" {
   source = "./modules/service"
 
+  domain             = var.domain
   name               = "immich"
   image              = "ghcr.io/immich-app/immich-server:v2.5.6"
   port               = 2283
@@ -35,6 +36,7 @@ module "immich" {
 module "immich_machine_learning" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "immich-machine-learning"
   image    = "ghcr.io/immich-app/immich-machine-learning:v2.5.6-openvino"
   networks = [docker_network.immich.id]
@@ -54,6 +56,7 @@ module "immich_machine_learning" {
 module "immich_redis" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "immich-redis"
   image    = "valkey/valkey:9"
   networks = [docker_network.immich.id]
@@ -66,6 +69,7 @@ module "immich_redis" {
 module "immich_postgres" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "immich-postgres"
   image    = "ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0"
   networks = [docker_network.immich.id]

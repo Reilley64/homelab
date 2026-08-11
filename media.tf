@@ -6,6 +6,7 @@ resource "docker_network" "media" {
 module "jellyfin" {
   source = "./modules/service"
 
+  domain             = var.domain
   name               = "jellyfin"
   image              = "linuxserver/jellyfin:latest"
   port               = 8096
@@ -45,6 +46,7 @@ module "radarr" {
   source     = "./modules/service"
   depends_on = [module.postgres]
 
+  domain   = var.domain
   name     = "radarr"
   image    = "linuxserver/radarr:latest"
   port     = 7878
@@ -72,6 +74,7 @@ module "sonarr" {
   source     = "./modules/service"
   depends_on = [module.postgres]
 
+  domain   = var.domain
   name     = "sonarr"
   image    = "linuxserver/sonarr:latest"
   port     = 8989
@@ -98,6 +101,7 @@ module "sonarr" {
 module "seerr" {
   source = "./modules/service"
 
+  domain             = var.domain
   name               = "seerr"
   image              = "seerr/seerr:latest"
   port               = 5055
@@ -123,6 +127,7 @@ module "seerr" {
 module "prowlarr" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "prowlarr"
   image    = "linuxserver/prowlarr:latest"
   port     = 9696
@@ -141,6 +146,7 @@ module "prowlarr" {
 module "flaresolverr" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "flaresolverr"
   image    = "flaresolverr/flaresolverr:latest"
   port     = 8191
@@ -158,6 +164,7 @@ module "flaresolverr" {
 module "bazarr" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "bazarr"
   image    = "linuxserver/bazarr:latest"
   port     = 6767
@@ -180,6 +187,7 @@ module "bazarr" {
 module "profilarr" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "profilarr"
   image    = "ghcr.io/dictionarry-hub/profilarr:latest"
   port     = 6868
@@ -200,6 +208,7 @@ module "profilarr" {
 module "unpackerr" {
   source = "./modules/service"
 
+  domain   = var.domain
   name     = "unpackerr"
   image    = "golift/unpackerr:latest"
   networks = [docker_network.media.id]

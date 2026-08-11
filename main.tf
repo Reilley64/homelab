@@ -34,8 +34,9 @@ resource "docker_image" "alpine" {
 module "diun" {
   source = "./modules/service"
 
-  name  = "diun"
-  image = "crazymax/diun:4.30.0"
+  domain = var.domain
+  name   = "diun"
+  image  = "crazymax/diun:4.30.0"
 
   env = concat(local.shared_env, [
     "DIUN_WATCH_WORKERS=20",
@@ -63,19 +64,20 @@ module "diun" {
 
 data "cloudflare_zone" "reilley_dev" {
   filter = {
-    name = "example.invalid"
+    name = var.domain
   }
 }
 
 module "ddns" {
   source = "./modules/service"
 
-  name  = "cloudflare-ddns"
-  image = "favonia/cloudflare-ddns:1.17.0"
+  domain = var.domain
+  name   = "cloudflare-ddns"
+  image  = "favonia/cloudflare-ddns:1.17.0"
 
   env = concat(local.shared_env, [
     "CLOUDFLARE_API_TOKEN=${var.cloudflare_api_token}",
-    "DOMAINS=app.example.invalid",
+    "DOMAINS=app.${var.domain}",
     "IP6_PROVIDER=none",
     "RECORD_COMMENT=managed by cloudflare-ddns",
   ])
