@@ -118,10 +118,14 @@ func (t *Tailer) startOffset(handle *os.File, inode uint64, size int64) (int64, 
 		return 0, err
 	}
 	if checkpoint == nil {
-		if err := t.saveCheckpoint(handle, inode, size); err != nil {
+		startOffset, err := firstStartOffset(handle, size)
+		if err != nil {
 			return 0, err
 		}
-		return size, nil
+		if err := t.saveCheckpoint(handle, inode, startOffset); err != nil {
+			return 0, err
+		}
+		return startOffset, nil
 	}
 
 	anchorMatches := false
@@ -141,6 +145,28 @@ func (t *Tailer) startOffset(handle *os.File, inode uint64, size int64) (int64, 
 		return 0, err
 	}
 	return 0, nil
+}
+
+func firstStartOffset(handle *os.File, size int64) (int64, error) {
+	if _, err := handle.Seek(0, io.SeekStart); err != nil {
+		return 0, fmt.Errorf("seek access log start: %w", err)
+	}
+	for {
+		lineStart, err := handle.Seek(0, io.SeekCurrent)
+		if err != nil {
+			return 0, fmt.Errorf("read access log cursor: %w", err)
+		}
+		line, err := readLine(handle)
+		if err != nil {
+			return 0, err
+		}
+		if line == nil {
+			return size, nil
+		}
+		if line[len(line)-1] != '\n' {
+			return lineStart, nil
+		}
+	}
 }
 
 func (t *Tailer) saveCheckpoint(handle *os.File, inode uint64, offset int64) error {

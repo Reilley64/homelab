@@ -62,6 +62,33 @@ func TestTailerFirstStartSkipsExistingLines(t *testing.T) {
 	}
 }
 
+func TestTailerFirstStartRetriesUnterminatedTrailingRecord(t *testing.T) {
+	paths := newTailerPaths(t)
+	completed := tailerLine(t, "203.0.113.8", 10, 0) + "\n"
+	partial := `{"RouterName":"jellyfin@docker","ClientHost":"203.0.113.8",`
+	writeTailerLog(t, paths.log, completed+partial)
+	tailer := newTailer(paths, NewMappingCache(time.Hour))
+
+	if processed, err := tailer.ProcessAvailable(time.Unix(1000, 0)); err != nil || processed != 0 {
+		t.Fatalf("first ProcessAvailable() = %d, %v; want 0, nil", processed, err)
+	}
+	checkpoint, err := LoadCheckpoint(paths.checkpoint)
+	if err != nil || checkpoint == nil || checkpoint.Offset != int64(len(completed)) {
+		t.Fatalf("checkpoint after first start = %#v, %v; want trailing record start %d", checkpoint, err, len(completed))
+	}
+
+	appendTailerLog(t, paths.log, `"DownstreamContentSize":7,"time":"1970-01-01T00:00:00Z"}`+"\n")
+	if processed, err := tailer.ProcessAvailable(time.Unix(1001, 0)); err != nil || processed != 1 {
+		t.Fatalf("ProcessAvailable() after record completion = %d, %v; want 1, nil", processed, err)
+	}
+	if processed, err := tailer.ProcessAvailable(time.Unix(1002, 0)); err != nil || processed != 0 {
+		t.Fatalf("ProcessAvailable() after retry = %d, %v; want 0, nil", processed, err)
+	}
+	if got := tailer.Metrics.Render(0); !strings.Contains(got, "jellyfin_egress_unattributed_bytes_total 7") {
+		t.Errorf("trailing record was not processed exactly once:\n%s", got)
+	}
+}
+
 func TestTailerCopyTruncateRestartsAtZero(t *testing.T) {
 	paths := newTailerPaths(t)
 	writeTailerLog(t, paths.log, strings.Repeat("x", 512)+"\n")
