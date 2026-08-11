@@ -1,5 +1,6 @@
 import json
 import re
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -11,10 +12,48 @@ PLUGIN_ENV = "GF_PLUGINS_PREINSTALL=marcusolsson-dynamictext-panel@6.3.0"
 
 
 def load_dashboard():
-    rendered = DASHBOARD_TEMPLATE.read_text().replace(
+    rendered = DASHBOARD_TEMPLATE.read_text().replace("$${", "${").replace(
         "${datasource_uid}", "test-prometheus"
     )
     return json.loads(rendered)
+
+
+def run_after_render(script, values):
+    harness = r"""
+const input = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+const valueElement = { textContent: 'No data' };
+const qualityElement = { textContent: '' };
+const properties = {};
+const root = {
+  dataset: {},
+  style: { setProperty: (name, value) => { properties[name] = value; } },
+  querySelector: (selector) => selector === '.jf-latency-value' ? valueElement : qualityElement,
+};
+const context = {
+  element: { querySelector: () => root },
+  data: {},
+};
+const afterRender = new Function('context', input.script);
+const states = input.values.map((value) => {
+  context.data.Value = value;
+  afterRender(context);
+  return {
+    quality: root.dataset.quality ?? null,
+    position: properties['--latency-position'] ?? null,
+    valueText: valueElement.textContent,
+    qualityText: qualityElement.textContent,
+  };
+});
+process.stdout.write(JSON.stringify(states));
+"""
+    completed = subprocess.run(
+        ["node", "-e", harness],
+        input=json.dumps({"script": script, "values": values}),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    return json.loads(completed.stdout)
 
 
 class GrafanaPluginConfigurationTests(unittest.TestCase):
@@ -55,6 +94,66 @@ class FaroLatencyDashboardTests(unittest.TestCase):
                 }])
                 self.assertNotIn("timeFrom", panel)
                 self.assertNotIn("timeShift", panel)
+
+    def test_latency_panels_leave_values_raw_for_custom_formatting(self):
+        for panel_id in (4, 9):
+            with self.subTest(panel_id=panel_id):
+                self.assertEqual(
+                    self.panels[panel_id]["fieldConfig"],
+                    {"defaults": {}, "overrides": []},
+                )
+
+    def test_non_numeric_rerender_resets_imperative_card_state(self):
+        expected = [
+            {
+                "quality": "warning",
+                "position": "30%",
+                "valueText": "1.50 s",
+                "qualityText": "(Needs improvement)",
+            },
+            {
+                "quality": None,
+                "position": "0%",
+                "valueText": "No data",
+                "qualityText": "",
+            },
+        ]
+        for panel_id in (4, 9):
+            with self.subTest(panel_id=panel_id):
+                states = run_after_render(
+                    self.panels[panel_id]["options"]["afterRender"], [1.5, None]
+                )
+                self.assertEqual(states, expected)
+
+    def test_default_content_contains_every_non_numeric_reset_target(self):
+        for panel_id in (4, 9):
+            with self.subTest(panel_id=panel_id):
+                default_content = self.panels[panel_id]["options"]["defaultContent"]
+                self.assertIn("jf-latency-value", default_content)
+                self.assertIn("jf-latency-quality", default_content)
+
+    def test_threshold_adjacent_display_does_not_cross_quality_boundary(self):
+        expected = [
+            {
+                "quality": "good",
+                "position": "19.992%",
+                "valueText": "999 ms",
+                "qualityText": "(Good)",
+            },
+            {
+                "quality": "warning",
+                "position": "39.980000000000004%",
+                "valueText": "1.99 s",
+                "qualityText": "(Needs improvement)",
+            },
+        ]
+        for panel_id in (4, 9):
+            with self.subTest(panel_id=panel_id):
+                states = run_after_render(
+                    self.panels[panel_id]["options"]["afterRender"],
+                    [0.9996, 1.999],
+                )
+                self.assertEqual(states, expected)
 
     def test_latency_cards_contain_faro_value_meter_and_indicators(self):
         required_content = (
@@ -103,8 +202,8 @@ class FaroLatencyDashboardTests(unittest.TestCase):
         )
         dashboard = json.loads(rendered)
         expected_literals = (
-            "${Math.round(seconds * 1000)} ms",
-            "${seconds.toFixed(seconds < 10 ? 2 : 1)} s",
+            "${Math.trunc(seconds * 1000)} ms",
+            "${truncatedSeconds.toFixed(decimals)} s",
             "${position}%",
             "(${label})",
         )

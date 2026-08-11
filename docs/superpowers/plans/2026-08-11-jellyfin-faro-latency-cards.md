@@ -201,6 +201,7 @@ Create `observability/test_jellyfin_faro_cards.py` with:
 
 ```python
 import json
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -212,7 +213,7 @@ PLUGIN_ENV = "GF_PLUGINS_PREINSTALL=marcusolsson-dynamictext-panel@6.3.0"
 
 
 def load_dashboard():
-    rendered = DASHBOARD_TEMPLATE.read_text().replace(
+    rendered = DASHBOARD_TEMPLATE.read_text().replace("$${", "${").replace(
         "${datasource_uid}", "test-prometheus"
     )
     return json.loads(rendered)
@@ -299,9 +300,44 @@ Expected: the commit contains only the Grafana environment entry and the initial
 
 - [ ] **Step 1: Add failing dashboard-structure tests**
 
-Insert the following class before the `if __name__ == "__main__"` block in `observability/test_jellyfin_faro_cards.py`:
+Add this executable JavaScript helper, then insert the following class before the `if __name__ == "__main__"` block in `observability/test_jellyfin_faro_cards.py`:
 
 ```python
+def run_after_render(script, values):
+    harness = r"""
+const input = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+const valueElement = { textContent: 'No data' };
+const qualityElement = { textContent: '' };
+const properties = {};
+const root = {
+  dataset: {},
+  style: { setProperty: (name, value) => { properties[name] = value; } },
+  querySelector: (selector) => selector === '.jf-latency-value' ? valueElement : qualityElement,
+};
+const context = { element: { querySelector: () => root }, data: {} };
+const afterRender = new Function('context', input.script);
+const states = input.values.map((value) => {
+  context.data.Value = value;
+  afterRender(context);
+  return {
+    quality: root.dataset.quality ?? null,
+    position: properties['--latency-position'] ?? null,
+    valueText: valueElement.textContent,
+    qualityText: qualityElement.textContent,
+  };
+});
+process.stdout.write(JSON.stringify(states));
+"""
+    completed = subprocess.run(
+        ["node", "-e", harness],
+        input=json.dumps({"script": script, "values": values}),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    return json.loads(completed.stdout)
+
+
 class FaroLatencyDashboardTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -329,6 +365,66 @@ class FaroLatencyDashboardTests(unittest.TestCase):
                 }])
                 self.assertNotIn("timeFrom", panel)
                 self.assertNotIn("timeShift", panel)
+
+    def test_latency_panels_leave_values_raw_for_custom_formatting(self):
+        for panel_id in (4, 9):
+            with self.subTest(panel_id=panel_id):
+                self.assertEqual(
+                    self.panels[panel_id]["fieldConfig"],
+                    {"defaults": {}, "overrides": []},
+                )
+
+    def test_non_numeric_rerender_resets_imperative_card_state(self):
+        expected = [
+            {
+                "quality": "warning",
+                "position": "30%",
+                "valueText": "1.50 s",
+                "qualityText": "(Needs improvement)",
+            },
+            {
+                "quality": None,
+                "position": "0%",
+                "valueText": "No data",
+                "qualityText": "",
+            },
+        ]
+        for panel_id in (4, 9):
+            with self.subTest(panel_id=panel_id):
+                states = run_after_render(
+                    self.panels[panel_id]["options"]["afterRender"], [1.5, None]
+                )
+                self.assertEqual(states, expected)
+
+    def test_default_content_contains_every_non_numeric_reset_target(self):
+        for panel_id in (4, 9):
+            with self.subTest(panel_id=panel_id):
+                default_content = self.panels[panel_id]["options"]["defaultContent"]
+                self.assertIn("jf-latency-value", default_content)
+                self.assertIn("jf-latency-quality", default_content)
+
+    def test_threshold_adjacent_display_does_not_cross_quality_boundary(self):
+        expected = [
+            {
+                "quality": "good",
+                "position": "19.992%",
+                "valueText": "999 ms",
+                "qualityText": "(Good)",
+            },
+            {
+                "quality": "warning",
+                "position": "39.980000000000004%",
+                "valueText": "1.99 s",
+                "qualityText": "(Needs improvement)",
+            },
+        ]
+        for panel_id in (4, 9):
+            with self.subTest(panel_id=panel_id):
+                states = run_after_render(
+                    self.panels[panel_id]["options"]["afterRender"],
+                    [0.9996, 1.999],
+                )
+                self.assertEqual(states, expected)
 
     def test_latency_cards_contain_faro_value_meter_and_indicators(self):
         required_content = (
@@ -423,9 +519,9 @@ Replace the `options` object on both panel `4` and panel `9` with this exact obj
 
 ```json
 {
-  "afterRender": "const root = context.element.querySelector('.jf-latency-card');\nconst raw = context.data?.Value;\nconst seconds = typeof raw === 'number' ? raw : Number.NaN;\nif (!root || !Number.isFinite(seconds)) { return; }\nconst quality = seconds < 1 ? 'good' : seconds < 2 ? 'warning' : 'poor';\nconst label = quality === 'good' ? 'Good' : quality === 'warning' ? 'Needs improvement' : 'Poor';\nconst display = seconds < 1 ? `${Math.round(seconds * 1000)} ms` : `${seconds.toFixed(seconds < 10 ? 2 : 1)} s`;\nconst position = Math.min(5, Math.max(0, seconds)) / 5 * 100;\nroot.dataset.quality = quality;\nroot.style.setProperty('--latency-position', `${position}%`);\nroot.querySelector('.jf-latency-value').textContent = display;\nroot.querySelector('.jf-latency-quality').textContent = `(${label})`;",
+  "afterRender": "const root = context.element.querySelector('.jf-latency-card');\nif (!root) { return; }\nconst valueElement = root.querySelector('.jf-latency-value');\nconst qualityElement = root.querySelector('.jf-latency-quality');\nconst raw = context.data?.Value;\nconst seconds = typeof raw === 'number' ? raw : Number.NaN;\nif (!Number.isFinite(seconds)) {\n  delete root.dataset.quality;\n  root.style.setProperty('--latency-position', '0%');\n  valueElement.textContent = 'No data';\n  qualityElement.textContent = '';\n  return;\n}\nconst quality = seconds < 1 ? 'good' : seconds < 2 ? 'warning' : 'poor';\nconst label = quality === 'good' ? 'Good' : quality === 'warning' ? 'Needs improvement' : 'Poor';\nconst decimals = seconds < 10 ? 2 : 1;\nconst precision = 10 ** decimals;\nconst truncatedSeconds = Math.trunc(seconds * precision) / precision;\nconst display = seconds < 1 ? `${Math.trunc(seconds * 1000)} ms` : `${truncatedSeconds.toFixed(decimals)} s`;\nconst position = Math.min(5, Math.max(0, seconds)) / 5 * 100;\nroot.dataset.quality = quality;\nroot.style.setProperty('--latency-position', `${position}%`);\nvalueElement.textContent = display;\nqualityElement.textContent = `(${label})`;",
   "content": "<div class=\"jf-latency-card\"><div class=\"jf-latency-reading\"><span class=\"jf-latency-value\">No data</span> <span class=\"jf-latency-quality\"></span></div><div class=\"jf-latency-meter\"><span class=\"jf-latency-meter__pointer\"></span><div class=\"jf-latency-meter__track\"><span class=\"jf-latency-meter__fill\"></span></div><span class=\"jf-latency-tick jf-latency-tick--one\"><i></i><b>1 s</b></span><span class=\"jf-latency-tick jf-latency-tick--two\"><i></i><b>2 s</b></span></div></div>",
-  "defaultContent": "<div class=\"jf-latency-card jf-latency-card--empty\"><div class=\"jf-latency-reading\"><span class=\"jf-latency-value\">No data</span></div><div class=\"jf-latency-meter\"><div class=\"jf-latency-meter__track\"></div><span class=\"jf-latency-tick jf-latency-tick--one\"><i></i><b>1 s</b></span><span class=\"jf-latency-tick jf-latency-tick--two\"><i></i><b>2 s</b></span></div></div>",
+  "defaultContent": "<div class=\"jf-latency-card jf-latency-card--empty\"><div class=\"jf-latency-reading\"><span class=\"jf-latency-value\">No data</span> <span class=\"jf-latency-quality\"></span></div><div class=\"jf-latency-meter\"><div class=\"jf-latency-meter__track\"></div><span class=\"jf-latency-tick jf-latency-tick--one\"><i></i><b>1 s</b></span><span class=\"jf-latency-tick jf-latency-tick--two\"><i></i><b>2 s</b></span></div></div>",
   "editor": { "format": "auto", "language": "html" },
   "editors": ["afterRender", "styles"],
   "renderMode": "everyRow",
@@ -451,7 +547,7 @@ For panel `4`, require these exact non-option fields:
   "title": "p95 latency",
   "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
   "gridPos": { "h": 5, "w": 6, "x": 12, "y": 9 },
-  "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+  "fieldConfig": { "defaults": {}, "overrides": [] },
   "targets": [{
     "refId": "A",
     "expr": "histogram_quantile(0.95, sum by (le) (increase(traefik_router_request_duration_seconds_bucket{router=\"jellyfin@docker\"}[$__range])))",
@@ -469,7 +565,7 @@ For panel `9`, require these exact non-option fields:
   "title": "p99 latency",
   "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
   "gridPos": { "h": 5, "w": 6, "x": 18, "y": 9 },
-  "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+  "fieldConfig": { "defaults": {}, "overrides": [] },
   "targets": [{
     "refId": "A",
     "expr": "histogram_quantile(0.99, sum by (le) (increase(traefik_router_request_duration_seconds_bucket{router=\"jellyfin@docker\"}[$__range])))",
@@ -478,7 +574,7 @@ For panel `9`, require these exact non-option fields:
 }
 ```
 
-Each object also contains the complete shared `options` object from Step 3. Do not retain Bar Gauge min/max/options; the meter's 0–5 scale is implemented by the after-render calculation and fixed tick positions.
+Each object also contains the complete shared `options` object from Step 3. Keep the field defaults unitless: Business Text formats every-row values into display strings whenever a field unit is configured, while this custom formatter requires the raw numeric seconds value. Do not retain Bar Gauge min/max/options; the meter's 0–5 scale is implemented by the after-render calculation and fixed tick positions.
 
 - [ ] **Step 5: Compact and reflow the affected dashboard rows**
 
