@@ -212,6 +212,7 @@ module "grafana" {
   env = concat(local.shared_env, [
     "GF_SECURITY_ADMIN_PASSWORD=${var.password}",
     "GF_SERVER_ROOT_URL=http://grafana.localdomain",
+    "GF_PLUGINS_PREINSTALL=marcusolsson-dynamictext-panel@6.3.0",
   ])
 
   user = "${var.uid}:${var.gid}"
