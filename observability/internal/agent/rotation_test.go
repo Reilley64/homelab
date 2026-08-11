@@ -37,6 +37,9 @@ func TestRotatorBelowThresholdDoesNotRotate(t *testing.T) {
 	if got := readRotationFile(t, path); got != "abc" {
 		t.Fatalf("active log = %q, want %q", got, "abc")
 	}
+	if _, err := os.Stat(path + ".1.gz"); !os.IsNotExist(err) {
+		t.Fatalf("first rotated copy stat error = %v, want not exist", err)
+	}
 }
 
 func TestRotatorAtThresholdCompressesAndTruncatesSameInode(t *testing.T) {

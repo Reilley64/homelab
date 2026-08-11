@@ -3,9 +3,11 @@ package agent
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -66,6 +68,40 @@ func TestJellyfinClientFetchSessions(t *testing.T) {
 	}}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("FetchSessions() = %#v, want %#v", got, want)
+	}
+}
+
+func TestJellyfinClientDefaultHTTPClientBoundsRequests(t *testing.T) {
+	originalTransport := http.DefaultTransport
+	t.Cleanup(func() { http.DefaultTransport = originalTransport })
+
+	var deadlineRemaining time.Duration
+	var sawDeadline bool
+	http.DefaultTransport = roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		deadline, ok := request.Context().Deadline()
+		if ok {
+			sawDeadline = true
+			deadlineRemaining = time.Until(deadline)
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     make(http.Header),
+			Body:       io.NopCloser(strings.NewReader("[]")),
+			Request:    request,
+		}, nil
+	})
+
+	client := JellyfinClient{BaseURL: "http://jellyfin.invalid", APIKey: "secret"}
+	if _, err := client.FetchSessions(context.Background()); err != nil {
+		t.Fatalf("FetchSessions() error = %v", err)
+	}
+	if !sawDeadline {
+		t.Fatal("default HTTP request has no deadline, want ten-second bound")
+	}
+	const expectedTimeout = 10 * time.Second
+	const schedulingTolerance = 250 * time.Millisecond
+	if deadlineRemaining < expectedTimeout-schedulingTolerance || deadlineRemaining > expectedTimeout {
+		t.Errorf("default HTTP request deadline remaining = %v, want within %v of %v", deadlineRemaining, schedulingTolerance, expectedTimeout)
 	}
 }
 
@@ -172,4 +208,10 @@ func TestMappingCacheDoesNotApplyPartialUpdates(t *testing.T) {
 	if got := cache.Lookup("203.0.113.8", time.Unix(101, 0)); got != "unknown" {
 		t.Errorf("Lookup(partial update) = %q, want unknown", got)
 	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (function roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
+	return function(request)
 }
