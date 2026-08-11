@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -148,23 +149,22 @@ func (t *Tailer) startOffset(handle *os.File, inode uint64, size int64) (int64, 
 }
 
 func firstStartOffset(handle *os.File, size int64) (int64, error) {
-	if _, err := handle.Seek(0, io.SeekStart); err != nil {
-		return 0, fmt.Errorf("seek access log start: %w", err)
-	}
+	reader := bufio.NewReader(io.NewSectionReader(handle, 0, size))
+	offset := int64(0)
 	for {
-		lineStart, err := handle.Seek(0, io.SeekCurrent)
-		if err != nil {
-			return 0, fmt.Errorf("read access log cursor: %w", err)
+		line, err := reader.ReadBytes('\n')
+		if err == io.EOF {
+			if len(line) == 0 {
+				return size, nil
+			}
+			return offset, nil
 		}
-		line, err := readLine(handle)
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("read access log snapshot: %w", err)
 		}
-		if line == nil {
+		offset += int64(len(line))
+		if offset == size {
 			return size, nil
-		}
-		if line[len(line)-1] != '\n' {
-			return lineStart, nil
 		}
 	}
 }

@@ -89,6 +89,28 @@ func TestTailerFirstStartRetriesUnterminatedTrailingRecord(t *testing.T) {
 	}
 }
 
+func TestFirstStartOffsetDoesNotReadPastStattedSize(t *testing.T) {
+	paths := newTailerPaths(t)
+	completed := tailerLine(t, "203.0.113.8", 10, 0) + "\n"
+	partial := `{"RouterName":"jellyfin@docker","ClientHost":"203.0.113.8",`
+	writeTailerLog(t, paths.log, completed+partial)
+	staleSize := int64(len(completed + partial))
+	appendTailerLog(t, paths.log, `"DownstreamContentSize":7,"time":"1970-01-01T00:00:00Z"}`+"\n")
+
+	handle, err := os.Open(paths.log)
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	defer handle.Close()
+	got, err := firstStartOffset(handle, staleSize)
+	if err != nil {
+		t.Fatalf("firstStartOffset() error = %v", err)
+	}
+	if want := int64(len(completed)); got != want {
+		t.Errorf("firstStartOffset() = %d, want partial record start %d", got, want)
+	}
+}
+
 func TestTailerCopyTruncateRestartsAtZero(t *testing.T) {
 	paths := newTailerPaths(t)
 	writeTailerLog(t, paths.log, strings.Repeat("x", 512)+"\n")
