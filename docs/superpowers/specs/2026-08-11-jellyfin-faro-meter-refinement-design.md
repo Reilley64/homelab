@@ -20,10 +20,11 @@ Each card keeps its native Grafana panel title. Inside the card:
 - Keep the current quality thresholds: Good below 1 second, Needs improvement from 1 second up to but not including 2 seconds, and Poor at 2 seconds or above.
 - Keep the value and quality text colored green, amber, or red according to that status.
 - Render the meter as a threshold guide rather than a progress fill:
-  - the first third is a fixed green Good zone representing 0–1 second;
-  - the second third is a fixed orange Needs improvement zone representing 1–2 seconds;
-  - the final third is a fixed red Poor zone representing 2–3 seconds and all visually clamped higher values;
-  - a neutral light downward triangle marks the current value independently of the Good zone;
+  - divide the track into three fixed equal zones representing 0–1, 1–2, and 2–3 seconds;
+  - highlight only the zone containing the current value: green for Good, orange for Needs improvement, or red for Poor;
+  - render the other two zones with the neutral Grafana track color;
+  - render all three zones neutral when no finite sample exists;
+  - a neutral light downward triangle marks the current value independently of the zone highlights;
   - threshold ticks and labels appear at one third (`1 s`) and two thirds (`2 s`).
 - Map the pointer linearly across a 0–3 second visual scale and clamp values at or above 3 seconds to the right edge.
 - Retain threshold-safe display formatting so shown values do not visually cross a status boundary because of rounding.
