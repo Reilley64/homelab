@@ -278,8 +278,8 @@ jq -e '
   def overlap($a; $b):
     ($a.x < ($b.x + $b.w)) and ($b.x < ($a.x + $a.w)) and
     ($a.y < ($b.y + $b.h)) and ($b.y < ($a.y + $a.h));
-  all(range(0; $p|length) as $i;
-    all(range($i + 1; $p|length) as $j;
+  all(range(0; $p|length); . as $i |
+    all(range($i + 1; $p|length); . as $j |
       overlap($p[$i]; $p[$j]) | not))
 '
 ```
