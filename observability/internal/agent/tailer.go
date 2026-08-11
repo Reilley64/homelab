@@ -22,7 +22,7 @@ type Tailer struct {
 	CheckpointPath string
 	Cache          *MappingCache
 	Metrics        *MetricState
-	FileMu         *sync.Mutex
+	FileMu         sync.Locker
 }
 
 // ProcessAvailable processes complete, checkpointed access-log records that

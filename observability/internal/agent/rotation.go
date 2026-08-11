@@ -14,7 +14,7 @@ type Rotator struct {
 	Path     string
 	MaxBytes int64
 	Copies   int
-	FileMu   *sync.Mutex
+	FileMu   sync.Locker
 }
 
 // RotateIfNeeded rotates Path when its size reaches MaxBytes. It preserves the

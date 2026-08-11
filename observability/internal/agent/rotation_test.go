@@ -112,28 +112,36 @@ func TestRotatorPropagatesRotationIOFailure(t *testing.T) {
 func TestTailerAndRotatorCoordinate(t *testing.T) {
 	paths := newTailerPaths(t)
 	writeTailerLog(t, paths.log, tailerLine(t, "203.0.113.8", 25, 0)+"\n")
-	fileMu := &sync.Mutex{}
+	sharedMu := &sync.Mutex{}
+	attempts := make(chan string, 2)
+	tailerMu := newLockProbe("tailer", sharedMu, attempts)
+	rotatorMu := newLockProbe("rotator", sharedMu, attempts)
 	tailer := newTailer(paths, NewMappingCache(time.Hour))
-	tailer.FileMu = fileMu
-	rotator := Rotator{Path: paths.log, MaxBytes: 1, Copies: 1, FileMu: fileMu}
+	tailer.FileMu = tailerMu
+	rotator := Rotator{Path: paths.log, MaxBytes: 1, Copies: 1, FileMu: rotatorMu}
 
-	fileMu.Lock()
-	tailerStarted := make(chan struct{})
-	rotatorStarted := make(chan struct{})
+	sharedMu.Lock()
 	tailerDone := make(chan error, 1)
 	rotatorDone := make(chan error, 1)
 	go func() {
-		close(tailerStarted)
 		_, err := tailer.ProcessAvailable(time.Unix(100, 0))
 		tailerDone <- err
 	}()
 	go func() {
-		close(rotatorStarted)
 		_, err := rotator.RotateIfNeeded()
 		rotatorDone <- err
 	}()
-	<-tailerStarted
-	<-rotatorStarted
+	seen := map[string]bool{}
+	for len(seen) < 2 {
+		select {
+		case operation := <-attempts:
+			seen[operation] = true
+		case err := <-tailerDone:
+			t.Fatalf("tailer completed without attempting the shared lock: %v", err)
+		case err := <-rotatorDone:
+			t.Fatalf("rotator completed without attempting the shared lock: %v", err)
+		}
+	}
 
 	if got := readRotationFile(t, paths.log); got == "" {
 		t.Fatal("rotation entered file work while shared mutex was locked")
@@ -152,13 +160,32 @@ func TestTailerAndRotatorCoordinate(t *testing.T) {
 	default:
 	}
 
-	fileMu.Unlock()
+	sharedMu.Unlock()
 	if err := <-tailerDone; err != nil {
 		t.Fatalf("tailer ProcessAvailable() error = %v", err)
 	}
 	if err := <-rotatorDone; err != nil {
 		t.Fatalf("rotator RotateIfNeeded() error = %v", err)
 	}
+}
+
+type lockProbe struct {
+	label    string
+	mu       *sync.Mutex
+	attempts chan<- string
+}
+
+func newLockProbe(label string, mu *sync.Mutex, attempts chan<- string) *lockProbe {
+	return &lockProbe{label: label, mu: mu, attempts: attempts}
+}
+
+func (p *lockProbe) Lock() {
+	p.attempts <- p.label
+	p.mu.Lock()
+}
+
+func (p *lockProbe) Unlock() {
+	p.mu.Unlock()
 }
 
 func writeRotationLog(t *testing.T, contents string) string {
