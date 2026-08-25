@@ -399,3 +399,158 @@ resource "grafana_rule_group" "host_disk" {
     }
   }
 }
+
+
+resource "grafana_rule_group" "public_service_availability" {
+  name             = "Public service availability"
+  folder_uid       = grafana_folder.homelab.uid
+  interval_seconds = 60
+
+  dynamic "rule" {
+    for_each = local.public_services
+
+    content {
+      name           = format("%s public route unavailable", rule.value.display_name)
+      condition      = "B"
+      for            = "5m"
+      no_data_state  = "Alerting"
+      exec_err_state = "Alerting"
+
+      annotations = {
+        summary = format("%s public route is unavailable: %s", rule.value.display_name, rule.value.url)
+      }
+
+      labels = {
+        service  = rule.key
+        severity = "critical"
+      }
+
+      data {
+        ref_id         = "A"
+        datasource_uid = grafana_data_source.prometheus.uid
+
+        relative_time_range {
+          from = 600
+          to   = 0
+        }
+
+        model = jsonencode({
+          refId         = "A"
+          expr          = format("probe_success{job=\"blackbox\", service=\"%s\"}", rule.key)
+          instant       = true
+          intervalMs    = 1000
+          maxDataPoints = 43200
+        })
+      }
+
+      data {
+        ref_id         = "B"
+        datasource_uid = "-100"
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+
+        model = jsonencode({
+          refId = "B"
+          type  = "classic_conditions"
+          datasource = {
+            type = "__expr__"
+            uid  = "-100"
+          }
+          conditions = [{
+            evaluator = { type = "lt", params = [1] }
+            operator  = { type = "and" }
+            query     = { params = ["A"] }
+            reducer   = { type = "last", params = [] }
+            type      = "query"
+          }]
+          intervalMs    = 1000
+          maxDataPoints = 43200
+        })
+      }
+
+      notification_settings {
+        contact_point = grafana_contact_point.discord.name
+      }
+    }
+  }
+}
+
+resource "grafana_rule_group" "public_service_tls" {
+  name             = "Public service TLS"
+  folder_uid       = grafana_folder.homelab.uid
+  interval_seconds = 60
+
+  dynamic "rule" {
+    for_each = local.public_services
+
+    content {
+      name           = format("%s TLS certificate expires soon", rule.value.display_name)
+      condition      = "B"
+      for            = "5m"
+      no_data_state  = "OK"
+      exec_err_state = "Alerting"
+
+      annotations = {
+        summary = format("%s has fewer than 14 days of TLS validity remaining: %s", rule.value.display_name, rule.value.url)
+      }
+
+      labels = {
+        service  = rule.key
+        severity = "warning"
+      }
+
+      data {
+        ref_id         = "A"
+        datasource_uid = grafana_data_source.prometheus.uid
+
+        relative_time_range {
+          from = 600
+          to   = 0
+        }
+
+        model = jsonencode({
+          refId         = "A"
+          expr          = format("(probe_ssl_earliest_cert_expiry{job=\"blackbox\", service=\"%s\"} - time()) / 86400", rule.key)
+          instant       = true
+          intervalMs    = 1000
+          maxDataPoints = 43200
+        })
+      }
+
+      data {
+        ref_id         = "B"
+        datasource_uid = "-100"
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+
+        model = jsonencode({
+          refId = "B"
+          type  = "classic_conditions"
+          datasource = {
+            type = "__expr__"
+            uid  = "-100"
+          }
+          conditions = [{
+            evaluator = { type = "lt", params = [14] }
+            operator  = { type = "and" }
+            query     = { params = ["A"] }
+            reducer   = { type = "last", params = [] }
+            type      = "query"
+          }]
+          intervalMs    = 1000
+          maxDataPoints = 43200
+        })
+      }
+
+      notification_settings {
+        contact_point = grafana_contact_point.discord.name
+      }
+    }
+  }
+}

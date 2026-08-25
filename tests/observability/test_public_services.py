@@ -75,5 +75,23 @@ class ProbeConfigurationTest(unittest.TestCase):
         self.assertEqual(relabeling[2]["replacement"], "blackbox-exporter:9115")
 
 
+    def test_alert_rules_use_shared_inventory_and_required_thresholds(self):
+        source = (REPO / "observability.tf").read_text()
+
+        self.assertIn(
+            'resource "grafana_rule_group" "public_service_availability"',
+            source,
+        )
+        self.assertIn(
+            'resource "grafana_rule_group" "public_service_tls"',
+            source,
+        )
+        self.assertEqual(source.count("for_each = local.public_services"), 2)
+        self.assertIn('for            = "5m"', source)
+        self.assertIn('no_data_state  = "Alerting"', source)
+        self.assertIn('params = [14]', source)
+        self.assertIn('severity = "critical"', source)
+        self.assertIn('severity = "warning"', source)
+
 if __name__ == "__main__":
     unittest.main()
