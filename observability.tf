@@ -3,6 +3,53 @@ resource "docker_network" "observability" {
   driver = "bridge"
 }
 
+locals {
+  public_services = {
+    bitwarden = {
+      display_name = "Bitwarden"
+      url          = format("https://bitwarden.%s", var.domain)
+    }
+    foundry = {
+      display_name = "Foundry"
+      url          = format("https://foundry.%s", var.domain)
+    }
+    immich = {
+      display_name = "Immich"
+      url          = format("https://immich.%s", var.domain)
+    }
+    jellyfin = {
+      display_name = "Jellyfin"
+      url          = format("https://jellyfin.%s", var.domain)
+    }
+    seerr = {
+      display_name = "Seerr"
+      url          = format("https://seerr.%s", var.domain)
+    }
+  }
+}
+
+module "blackbox_exporter" {
+  source = "./modules/service"
+
+  domain   = var.domain
+  name     = "blackbox-exporter"
+  image    = "prom/blackbox-exporter:latest"
+  networks = [docker_network.observability.id]
+
+  env = local.shared_env
+
+  command = [
+    "--config.file=/etc/blackbox_exporter/config.yml",
+  ]
+
+  uploads = [
+    {
+      file    = "/etc/blackbox_exporter/config.yml"
+      content = file(format("%s/observability/blackbox.yml", path.module))
+    },
+  ]
+}
+
 module "node_exporter" {
   source = "./modules/service"
 
@@ -58,8 +105,10 @@ module "prometheus" {
 
   uploads = [
     {
-      file    = "/etc/prometheus/prometheus.yml"
-      content = file("${path.module}/observability/prometheus.yml")
+      file = "/etc/prometheus/prometheus.yml"
+      content = templatefile(format("%s/observability/prometheus.yml.tftpl", path.module), {
+        public_services = local.public_services
+      })
     },
   ]
 

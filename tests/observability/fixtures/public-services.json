@@ -1,0 +1,24 @@
+{
+  "services": {
+    "bitwarden": {
+      "display_name": "Bitwarden",
+      "url": "https://bitwarden.example.test"
+    },
+    "foundry": {
+      "display_name": "Foundry",
+      "url": "https://foundry.example.test"
+    },
+    "immich": {
+      "display_name": "Immich",
+      "url": "https://immich.example.test"
+    },
+    "jellyfin": {
+      "display_name": "Jellyfin",
+      "url": "https://jellyfin.example.test"
+    },
+    "seerr": {
+      "display_name": "Seerr",
+      "url": "https://seerr.example.test"
+    }
+  }
+}
