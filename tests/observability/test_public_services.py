@@ -74,6 +74,36 @@ class ProbeConfigurationTest(unittest.TestCase):
         self.assertEqual(relabeling[1]["target_label"], "instance")
         self.assertEqual(relabeling[2]["replacement"], "blackbox-exporter:9115")
 
+    def test_dashboard_combines_public_overview_and_jellyfin_details(self):
+        dashboard = terraform_json(
+            'jsondecode(templatefile('
+            '"observability/jellyfin-dashboard.json.tftpl", '
+            '{ datasource_uid = "fixture-prometheus" }))'
+        )
+        panels = dashboard["panels"]
+        panel_by_id = {panel["id"]: panel for panel in panels}
+
+        self.assertEqual(dashboard["uid"], "jellyfin")
+        self.assertEqual(dashboard["title"], "Public Services")
+        self.assertTrue({10, 11, 12, 13, 14, 15, 16} <= set(panel_by_id))
+        self.assertTrue({1, 2, 3, 4, 8, 9} <= set(panel_by_id))
+
+        public_row = panel_by_id[10]
+        self.assertEqual(public_row["type"], "row")
+        self.assertFalse(public_row["collapsed"])
+        self.assertEqual(public_row["title"], "Public service overview")
+
+        jellyfin_row = panel_by_id[16]
+        self.assertEqual(jellyfin_row["type"], "row")
+        self.assertFalse(jellyfin_row["collapsed"])
+        self.assertEqual(jellyfin_row["title"], "Jellyfin details")
+
+        self.assertEqual(panel_by_id[11]["type"], "stat")
+        self.assertEqual(panel_by_id[12]["type"], "state-timeline")
+        self.assertEqual(panel_by_id[13]["type"], "timeseries")
+        self.assertEqual(panel_by_id[14]["title"], "Latest HTTP status")
+        self.assertEqual(panel_by_id[15]["title"], "TLS validity remaining")
+        self.assertTrue(all(panel_by_id[id]["gridPos"]["y"] >= 28 for id in (1, 2, 3, 4, 8, 9)))
 
     def test_alert_rules_use_shared_inventory_and_required_thresholds(self):
         source = (REPO / "observability.tf").read_text()

@@ -1,19 +1,218 @@
 {
   "uid": "jellyfin",
-  "title": "Jellyfin",
-  "tags": ["jellyfin", "traefik"],
+  "title": "Public Services",
+  "tags": ["homelab", "public-services", "jellyfin", "traefik"],
   "schemaVersion": 39,
   "editable": false,
   "time": { "from": "now-24h", "to": "now" },
   "refresh": "1m",
   "panels": [
     {
+      "id": 10,
+      "type": "row",
+      "title": "Public service overview",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Current service status",
+      "description": "Latest in-network HTTPS probe result for each public route.",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "Down", "color": "red" },
+                "1": { "text": "Up", "color": "green" }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": { "text": "Unknown", "color": "gray" }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "probe_success{job=\"blackbox\"}",
+          "instant": true,
+          "legendFormat": "{{service_name}}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "state-timeline",
+      "title": "Availability history",
+      "description": "Probe state over the selected dashboard time range.",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "Down", "color": "red" },
+                "1": { "text": "Up", "color": "green" }
+              }
+            }
+          ],
+          "custom": { "fillOpacity": 80, "lineWidth": 0, "spanNulls": false }
+        },
+        "overrides": []
+      },
+      "options": {
+        "alignValue": "left",
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "mergeValues": true,
+        "rowHeight": 0.9,
+        "showValue": "auto",
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "probe_success{job=\"blackbox\"}",
+          "legendFormat": "{{service_name}}"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Public route response latency",
+      "description": "Total time for DNS, connection, TLS, redirects, and the final HTTP response.",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 13 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": { "fillOpacity": 12, "lineWidth": 2, "showPoints": "never" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "probe_duration_seconds{job=\"blackbox\"}",
+          "legendFormat": "{{service_name}}"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Latest HTTP status",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 5, "w": 12, "x": 0, "y": 22 },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" } },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "probe_http_status_code{job=\"blackbox\"}",
+          "instant": true,
+          "legendFormat": "{{service_name}}"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "TLS validity remaining",
+      "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
+      "gridPos": { "h": 5, "w": 12, "x": 12, "y": 22 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: days",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 14 },
+              { "color": "green", "value": 30 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(probe_ssl_earliest_cert_expiry{job=\"blackbox\"} - time()) / 86400",
+          "instant": true,
+          "legendFormat": "{{service_name}}"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "row",
+      "title": "Jellyfin details",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 }
+    },
+    {
       "id": 1,
       "type": "timeseries",
       "title": "Public response accounting rate",
       "description": "Completed public-router response bytes accounted over time; not physical WAN-interface throughput and may include public-hostname hairpin traffic.",
       "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 10 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 38 },
       "fieldConfig": {
         "defaults": {
           "unit": "bps",
@@ -35,7 +234,7 @@
       "type": "stat",
       "title": "Public egress",
       "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 4 },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 32 },
       "fieldConfig": {
         "defaults": { "unit": "decbytes", "color": { "mode": "fixed", "fixedColor": "blue" } },
         "overrides": []
@@ -54,7 +253,7 @@
       "type": "table",
       "title": "Egress by user",
       "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
-      "gridPos": { "h": 6, "w": 18, "x": 6, "y": 4 },
+      "gridPos": { "h": 6, "w": 18, "x": 6, "y": 32 },
       "fieldConfig": {
         "defaults": {},
         "overrides": [
@@ -92,7 +291,7 @@
       "type": "marcusolsson-dynamictext-panel",
       "title": "p95 latency",
       "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
-      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 0 },
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 28 },
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -124,7 +323,7 @@
       "type": "marcusolsson-dynamictext-panel",
       "title": "p99 latency",
       "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
-      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 0 },
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 28 },
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -156,7 +355,7 @@
       "type": "timeseries",
       "title": "Request rate, public vs LAN",
       "datasource": { "type": "prometheus", "uid": "${datasource_uid}" },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 20 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 48 },
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
