@@ -1,0 +1,131 @@
+region     = "{{ nomad_region }}"
+datacenter = "{{ nomad_datacenter }}"
+name       = "{{ inventory_hostname }}"
+data_dir   = "{{ nomad_data_dir }}"
+
+bind_addr = "{{ nomad_address }}"
+
+addresses {
+  http = "127.0.0.1 {{ nomad_address }}"
+}
+
+advertise {
+  http = "{{ nomad_address }}"
+  rpc  = "{{ nomad_address }}"
+  serf = "{{ nomad_address }}"
+}
+
+ports {
+  http = 4646
+  rpc  = 4647
+  serf = 4648
+}
+
+server {
+  enabled          = true
+  bootstrap_expect = 1
+}
+
+client {
+  enabled               = true
+  network_interface     = "{{ nomad_lan_interface }}"
+  cni_path              = "{{ nomad_cni_path }}"
+  bridge_network_subnet = "{{ nomad_bridge_network_subnet }}"
+
+  host_network "lan" {
+    interface = "{{ nomad_lan_interface }}"
+    cidr      = "{{ nomad_address }}/32"
+  }
+
+  host_network "internal" {
+    interface = "{{ nomad_internal_interface }}"
+    cidr      = "{{ nomad_internal_address }}/32"
+  }
+
+  host_volume "downloads" {
+    path = "{{ nomad_downloads_dir }}"
+  }
+{% for volume in nomad_appdata_volumes %}
+
+  host_volume "{{ volume | replace('/', '-') }}" {
+    path = "{{ nomad_appdata_dir }}/{{ volume }}"
+  }
+{% endfor %}
+}
+
+acl {
+  enabled = true
+}
+
+tls {
+  http = true
+  rpc  = true
+
+  ca_file   = "{{ nomad_config_dir }}/tls/ca.crt"
+  cert_file = "{{ nomad_config_dir }}/tls/agent.crt"
+  key_file  = "{{ nomad_config_dir }}/tls/agent.key"
+
+  verify_server_hostname = true
+  # Vault and Consul fetch the JWKS from the HTTP API without a client certificate.
+  verify_https_client = false
+}
+
+# The agent's own token comes from CONSUL_HTTP_TOKEN in {{ nomad_env_file }}.
+consul {
+  address      = "127.0.0.1:8501"
+  ssl          = true
+  ca_file      = "{{ nomad_config_dir }}/tls/ca.crt"
+  grpc_address = "127.0.0.1:8503"
+  grpc_ca_file = "{{ nomad_config_dir }}/tls/ca.crt"
+
+  service_auth_method = "nomad-workloads"
+  task_auth_method    = "nomad-workloads"
+
+  service_identity {
+    aud = ["consul.io"]
+    ttl = "1h"
+  }
+
+  task_identity {
+    aud = ["consul.io"]
+    ttl = "1h"
+  }
+}
+
+vault {
+  enabled               = true
+  address               = "https://127.0.0.1:8200"
+  ca_file               = "{{ nomad_config_dir }}/tls/ca.crt"
+  jwt_auth_backend_path = "jwt-nomad"
+
+  default_identity {
+    aud = ["vault.io"]
+    ttl = "1h"
+  }
+}
+
+plugin "docker" {
+  config {
+    allow_privileged = false
+    allow_caps       = {{ nomad_docker_allow_caps | to_json }}
+
+    volumes {
+      enabled = true
+    }
+
+    # Terraform builds tabletop and observability-agent on this host and jobs
+    # use them by tag. A long delay keeps them while a job restarts or redeploys.
+    gc {
+      image       = true
+      image_delay = "168h"
+      container   = true
+    }
+  }
+}
+
+telemetry {
+  prometheus_metrics         = true
+  publish_allocation_metrics = true
+  publish_node_metrics       = true
+  disable_hostname           = true
+}

@@ -1,0 +1,13 @@
+# Vault reopens its audit file on SIGHUP.
+{{ vault_log_dir }}/audit.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0600 vault vault
+    postrotate
+        systemctl kill --signal=HUP --kill-whom=main vault.service
+    endscript
+}

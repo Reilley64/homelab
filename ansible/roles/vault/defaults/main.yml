@@ -1,0 +1,9 @@
+---
+vault_version: 2.2.1
+vault_address: "{{ ansible_facts['default_ipv4']['address'] }}"
+vault_config_dir: /etc/vault.d
+vault_data_dir: /var/lib/vault
+vault_log_dir: /var/log/vault
+vault_env_file: /etc/homelab/vault.env
+vault_kms_region: ap-southeast-2
+vault_kms_key_id: alias/homelab-vault-unseal

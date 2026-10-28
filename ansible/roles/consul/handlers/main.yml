@@ -1,0 +1,10 @@
+---
+- name: Reload systemd for consul
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: Restart consul
+  ansible.builtin.systemd_service:
+    name: consul.service
+    state: restarted
+  ignore_errors: "{{ ansible_check_mode }}"

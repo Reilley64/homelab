@@ -1,0 +1,134 @@
+---
+- name: Install Nomad and the CNI plugins
+  community.general.portage:
+    package:
+      - "=sys-cluster/nomad-bin-{{ nomad_version }}"
+      - app-containers/cni-plugins
+  # The overlay is not synced in check mode.
+  ignore_errors: "{{ ansible_check_mode }}"
+
+# Services that must not be reachable from the LAN bind their ports here.
+- name: Create the internal interface
+  ansible.builtin.template:
+    src: "internal.{{ item }}.j2"
+    dest: "/etc/systemd/network/40-{{ nomad_internal_interface }}.{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - netdev
+    - network
+  notify: Reload networkd for the internal interface
+
+# Bridge mode needs bridge traffic to pass through iptables, as the Nomad
+# install docs require. Docker's FORWARD rules accept traffic from its own
+# bridges, so this does not change the running containers.
+- name: Load br_netfilter at boot
+  ansible.builtin.copy:
+    content: "br_netfilter\n"
+    dest: /etc/modules-load.d/nomad-bridge.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Load br_netfilter now
+  community.general.modprobe:
+    name: br_netfilter
+    state: present
+
+- name: Send bridge traffic through iptables
+  ansible.builtin.copy:
+    src: 90-nomad-bridge.conf
+    dest: /etc/sysctl.d/90-nomad-bridge.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Load the bridge sysctls
+
+- name: Create the Nomad config directory
+  ansible.builtin.file:
+    path: "{{ nomad_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Create the Nomad data directory
+  ansible.builtin.file:
+    path: "{{ nomad_data_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0711"
+
+- name: Issue the Nomad certificate
+  ansible.builtin.include_role:
+    name: pki
+    tasks_from: leaf
+  vars:
+    pki_cert_name: nomad
+    pki_cert_common_name: server.{{ nomad_region }}.nomad
+    pki_cert_subject_alt_names:
+      - DNS:server.{{ nomad_region }}.nomad
+      - DNS:client.{{ nomad_region }}.nomad
+      - DNS:{{ inventory_hostname }}
+      - DNS:localhost
+      - IP:127.0.0.1
+      - IP:{{ nomad_address }}
+    pki_cert_dir: "{{ nomad_config_dir }}/tls"
+    pki_cert_group: root
+    pki_cert_handler: Restart nomad
+
+- name: Generate the gossip key
+  ansible.builtin.shell: |
+    set -e
+    umask 077
+    key=$(nomad operator gossip keyring generate)
+    printf 'server {\n  encrypt = "%s"\n}\n' "$key" >{{ nomad_config_dir }}/encrypt.hcl
+  args:
+    creates: "{{ nomad_config_dir }}/encrypt.hcl"
+  notify: Restart nomad
+
+- name: Check for the hand-placed Consul token
+  ansible.builtin.stat:
+    path: "{{ nomad_env_file }}"
+  register: nomad_env
+
+- name: Require the Consul token file
+  ansible.builtin.assert:
+    that: nomad_env.stat.exists
+    fail_msg: >-
+      {{ nomad_env_file }} is missing. Create it by hand, mode 0600, with
+      CONSUL_HTTP_TOKEN set to the Nomad agent's Consul token.
+  when: nomad_env_file_required
+
+- name: Write the Nomad config
+  ansible.builtin.template:
+    src: nomad.hcl.j2
+    dest: "{{ nomad_config_dir }}/nomad.hcl"
+    owner: root
+    group: root
+    mode: "0600"
+    validate: nomad config validate %s
+  notify: Restart nomad
+
+- name: Install the Nomad unit
+  ansible.builtin.template:
+    src: nomad.service.j2
+    dest: /etc/systemd/system/nomad.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd for nomad
+    - Restart nomad
+
+- name: Apply changed Nomad files
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable Nomad
+  ansible.builtin.systemd_service:
+    name: nomad.service
+    enabled: true
+    state: started
+  ignore_errors: "{{ ansible_check_mode }}"

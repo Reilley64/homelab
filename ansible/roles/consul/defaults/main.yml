@@ -1,0 +1,7 @@
+---
+consul_version: 2.1.0
+consul_datacenter: homelab
+consul_domain: consul
+consul_address: "{{ ansible_facts['default_ipv4']['address'] }}"
+consul_config_dir: /etc/consul.d
+consul_data_dir: /var/lib/consul

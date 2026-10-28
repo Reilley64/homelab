@@ -1,0 +1,37 @@
+ui            = true
+cluster_name  = "homelab"
+api_addr      = "https://{{ vault_address }}:8200"
+cluster_addr  = "https://{{ vault_address }}:8201"
+
+# Integrated storage memory-maps its database, so mlock is off as Vault
+# recommends. The unit sets MemorySwapMax=0 so Vault's memory never reaches swap.
+disable_mlock = true
+
+storage "raft" {
+  path    = "{{ vault_data_dir }}/raft"
+  node_id = "{{ inventory_hostname }}"
+}
+
+{% for address in [vault_address, '127.0.0.1'] %}
+listener "tcp" {
+  address         = "{{ address }}:8200"
+  cluster_address = "{{ address }}:8201"
+  tls_cert_file   = "{{ vault_config_dir }}/tls/agent.crt"
+  tls_key_file    = "{{ vault_config_dir }}/tls/agent.key"
+
+  telemetry {
+    unauthenticated_metrics_access = true
+  }
+}
+
+{% endfor %}
+# AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY come from {{ vault_env_file }}.
+seal "awskms" {
+  region     = "{{ vault_kms_region }}"
+  kms_key_id = "{{ vault_kms_key_id }}"
+}
+
+telemetry {
+  prometheus_retention_time = "24h"
+  disable_hostname          = true
+}

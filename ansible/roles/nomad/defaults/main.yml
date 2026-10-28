@@ -1,0 +1,61 @@
+---
+nomad_version: 2.0.7
+nomad_region: global
+nomad_datacenter: homelab
+nomad_address: "{{ ansible_facts['default_ipv4']['address'] }}"
+nomad_lan_interface: "{{ ansible_facts['default_ipv4']['interface'] }}"
+nomad_config_dir: /etc/nomad.d
+nomad_data_dir: /var/lib/nomad
+nomad_cni_path: /opt/cni/bin
+nomad_bridge_network_subnet: 10.90.0.0/20
+nomad_internal_interface: internal0
+nomad_internal_address: 10.91.0.1
+# Holds CONSUL_HTTP_TOKEN, the agent's own Consul token. It is placed by hand
+# during bootstrap. Set nomad_env_file_required to true once it exists.
+nomad_env_file: /etc/homelab/nomad.env
+nomad_env_file_required: false
+nomad_downloads_dir: /home/{{ ansible_user }}/downloads
+nomad_appdata_dir: /home/{{ ansible_user }}/appdata
+# Each folder under appdata becomes a host volume. Slashes in the path become
+# hyphens in the volume name.
+nomad_appdata_volumes:
+  - alloy
+  - arcto/vaultwarden
+  - bazarr
+  - bitwarden
+  - diun
+  - grafana
+  - jellyfin
+  - jellyfin/log
+  - jellyfin-egress-exporter
+  - letsencrypt
+  - loki
+  - piper
+  - postgres
+  - profilarr
+  - prometheus
+  - prowlarr
+  - qbittorrent
+  - radarr
+  - seerr
+  - sonarr
+  - tempo
+  - traefik/log
+  - unpackerr
+# Docker's default capabilities, which Nomad also allows by default, plus
+# net_admin for gluetun.
+nomad_docker_allow_caps:
+  - audit_write
+  - chown
+  - dac_override
+  - fowner
+  - fsetid
+  - kill
+  - mknod
+  - net_bind_service
+  - setfcap
+  - setgid
+  - setpcap
+  - setuid
+  - sys_chroot
+  - net_admin

@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  author: Reilley64
+  description: Private CA on the controller and leaf certificates for the HashiCorp agents
+  license: proprietary
+  min_ansible_version: "2.18"
+  platforms:
+    - name: Gentoo
+      versions:
+        - all
+dependencies: []

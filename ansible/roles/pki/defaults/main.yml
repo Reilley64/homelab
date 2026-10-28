@@ -1,0 +1,7 @@
+---
+pki_dir: "{{ lookup('ansible.builtin.env', 'HOME') }}/.homelab/pki"
+pki_ca_common_name: homelab CA
+pki_ca_not_after: +3650d
+pki_cert_not_after: +365d
+pki_cert_renew_before: +30d
+pki_trust_store_dir: /usr/local/share/ca-certificates

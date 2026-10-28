@@ -1,0 +1,81 @@
+---
+- name: Install Consul
+  community.general.portage:
+    package: "=app-admin/consul-bin-{{ consul_version }}"
+  # The overlay is not synced in check mode.
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Create the Consul config directory
+  ansible.builtin.file:
+    path: "{{ consul_config_dir }}"
+    state: directory
+    owner: root
+    group: consul
+    mode: "0750"
+
+- name: Create the Consul data directory
+  ansible.builtin.file:
+    path: "{{ consul_data_dir }}"
+    state: directory
+    owner: consul
+    group: consul
+    mode: "0750"
+
+- name: Issue the Consul certificate
+  ansible.builtin.include_role:
+    name: pki
+    tasks_from: leaf
+  vars:
+    pki_cert_name: consul
+    pki_cert_common_name: server.{{ consul_datacenter }}.{{ consul_domain }}
+    pki_cert_subject_alt_names:
+      - DNS:server.{{ consul_datacenter }}.{{ consul_domain }}
+      - DNS:{{ inventory_hostname }}
+      - DNS:localhost
+      - IP:127.0.0.1
+      - IP:{{ consul_address }}
+    pki_cert_dir: "{{ consul_config_dir }}/tls"
+    pki_cert_group: consul
+    pki_cert_handler: Restart consul
+
+- name: Generate the gossip key
+  ansible.builtin.shell: |
+    set -e
+    umask 027
+    key=$(consul keygen)
+    printf 'encrypt = "%s"\n' "$key" >{{ consul_config_dir }}/encrypt.hcl
+    chgrp consul {{ consul_config_dir }}/encrypt.hcl
+  args:
+    creates: "{{ consul_config_dir }}/encrypt.hcl"
+  notify: Restart consul
+
+- name: Write the Consul config
+  ansible.builtin.template:
+    src: consul.hcl.j2
+    dest: "{{ consul_config_dir }}/consul.hcl"
+    owner: root
+    group: consul
+    mode: "0640"
+    validate: consul validate -config-format=hcl %s
+  notify: Restart consul
+
+- name: Install the Consul unit
+  ansible.builtin.copy:
+    src: consul.service
+    dest: /etc/systemd/system/consul.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd for consul
+    - Restart consul
+
+- name: Apply changed Consul files
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable Consul
+  ansible.builtin.systemd_service:
+    name: consul.service
+    enabled: true
+    state: started
+  ignore_errors: "{{ ansible_check_mode }}"

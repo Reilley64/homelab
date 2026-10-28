@@ -1,0 +1,62 @@
+---
+# The CA lives on the controller only. Its key never reaches the host.
+- name: Create the CA
+  delegate_to: localhost
+  run_once: true
+  become: false
+  # On the first check mode run nothing exists yet, so tasks that read the CA fail.
+  ignore_errors: "{{ ansible_check_mode }}"
+  block:
+    - name: Create the PKI directory
+      ansible.builtin.file:
+        path: "{{ pki_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Generate the CA key
+      community.crypto.openssl_privatekey:
+        path: "{{ pki_dir }}/ca.key"
+        type: ECC
+        curve: secp256r1
+        mode: "0600"
+
+    - name: Create the CA signing request
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{ pki_dir }}/ca.key"
+        common_name: "{{ pki_ca_common_name }}"
+        use_common_name_for_san: false
+        basic_constraints:
+          - CA:TRUE
+        basic_constraints_critical: true
+        key_usage:
+          - keyCertSign
+          - cRLSign
+        key_usage_critical: true
+      register: pki_ca_csr
+
+    - name: Self-sign the CA certificate
+      community.crypto.x509_certificate:
+        path: "{{ pki_dir }}/ca.crt"
+        csr_content: "{{ pki_ca_csr.csr }}"
+        privatekey_path: "{{ pki_dir }}/ca.key"
+        provider: selfsigned
+        selfsigned_not_after: "{{ pki_ca_not_after }}"
+        mode: "0644"
+
+- name: Create the local CA directory
+  ansible.builtin.file:
+    path: "{{ pki_trust_store_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Trust the CA on the host
+  ansible.builtin.copy:
+    src: "{{ pki_dir }}/ca.crt"
+    dest: "{{ pki_trust_store_dir }}/homelab-ca.crt"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Update the CA trust store
+  ignore_errors: "{{ ansible_check_mode }}"

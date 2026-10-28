@@ -1,0 +1,97 @@
+---
+# Included by the consul, vault and nomad roles with:
+#   pki_cert_name, pki_cert_common_name, pki_cert_subject_alt_names,
+#   pki_cert_dir, pki_cert_group and pki_cert_handler.
+# Keys are generated and kept next to the CA on the controller, so the host
+# needs no Python crypto library. Ansible copies them to the host.
+- name: Issue the certificate for {{ pki_cert_name }}
+  delegate_to: localhost
+  become: false
+  ignore_errors: "{{ ansible_check_mode }}"
+  block:
+    - name: Create the host directory for {{ pki_cert_name }}
+      ansible.builtin.file:
+        path: "{{ pki_dir }}/{{ inventory_hostname }}"
+        state: directory
+        mode: "0700"
+
+    - name: Generate the key for {{ pki_cert_name }}
+      community.crypto.openssl_privatekey:
+        path: "{{ pki_dir }}/{{ inventory_hostname }}/{{ pki_cert_name }}.key"
+        type: ECC
+        curve: secp256r1
+        mode: "0600"
+
+    - name: Create the signing request for {{ pki_cert_name }}
+      community.crypto.openssl_csr:
+        path: "{{ pki_dir }}/{{ inventory_hostname }}/{{ pki_cert_name }}.csr"
+        privatekey_path: "{{ pki_dir }}/{{ inventory_hostname }}/{{ pki_cert_name }}.key"
+        common_name: "{{ pki_cert_common_name }}"
+        subject_alt_name: "{{ pki_cert_subject_alt_names }}"
+        basic_constraints:
+          - CA:FALSE
+        key_usage:
+          - digitalSignature
+        key_usage_critical: true
+        extended_key_usage:
+          - serverAuth
+          - clientAuth
+        mode: "0600"
+
+    - name: Check the expiry of the certificate for {{ pki_cert_name }}
+      community.crypto.x509_certificate_info:
+        path: "{{ pki_dir }}/{{ inventory_hostname }}/{{ pki_cert_name }}.crt"
+        valid_at:
+          renew: "{{ pki_cert_renew_before }}"
+      register: pki_cert_info
+      failed_when: false
+
+    - name: Sign the certificate for {{ pki_cert_name }}
+      community.crypto.x509_certificate:
+        path: "{{ pki_dir }}/{{ inventory_hostname }}/{{ pki_cert_name }}.crt"
+        csr_path: "{{ pki_dir }}/{{ inventory_hostname }}/{{ pki_cert_name }}.csr"
+        provider: ownca
+        ownca_path: "{{ pki_dir }}/ca.crt"
+        ownca_privatekey_path: "{{ pki_dir }}/ca.key"
+        ownca_not_after: "{{ pki_cert_not_after }}"
+        force: "{{ not (pki_cert_info.valid_at.renew | default(true)) }}"
+        mode: "0644"
+
+- name: Create the TLS directory for {{ pki_cert_name }}
+  ansible.builtin.file:
+    path: "{{ pki_cert_dir }}"
+    state: directory
+    owner: root
+    group: "{{ pki_cert_group }}"
+    mode: "0750"
+
+- name: Install the TLS files for {{ pki_cert_name }}
+  ignore_errors: "{{ ansible_check_mode }}"
+  block:
+    - name: Install the CA certificate for {{ pki_cert_name }}
+      ansible.builtin.copy:
+        src: "{{ pki_dir }}/ca.crt"
+        dest: "{{ pki_cert_dir }}/ca.crt"
+        owner: root
+        group: "{{ pki_cert_group }}"
+        mode: "0644"
+      notify: "{{ pki_cert_handler }}"
+
+    - name: Install the certificate for {{ pki_cert_name }}
+      ansible.builtin.copy:
+        src: "{{ pki_dir }}/{{ inventory_hostname }}/{{ pki_cert_name }}.crt"
+        dest: "{{ pki_cert_dir }}/agent.crt"
+        owner: root
+        group: "{{ pki_cert_group }}"
+        mode: "0644"
+      notify: "{{ pki_cert_handler }}"
+
+    - name: Install the key for {{ pki_cert_name }}
+      ansible.builtin.copy:
+        src: "{{ pki_dir }}/{{ inventory_hostname }}/{{ pki_cert_name }}.key"
+        dest: "{{ pki_cert_dir }}/agent.key"
+        owner: root
+        group: "{{ pki_cert_group }}"
+        mode: "0640"
+      diff: false
+      notify: "{{ pki_cert_handler }}"

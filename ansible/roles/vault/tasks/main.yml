@@ -1,0 +1,119 @@
+---
+- name: Install Vault
+  community.general.portage:
+    package: "=app-admin/vault-bin-{{ vault_version }}"
+  # The overlay is not synced in check mode.
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Check for the hand-placed unseal credentials
+  ansible.builtin.stat:
+    path: "{{ vault_env_file }}"
+  register: vault_env
+
+- name: Require the unseal credentials file
+  ansible.builtin.assert:
+    that: vault_env.stat.exists
+    fail_msg: >-
+      {{ vault_env_file }} is missing. Create it by hand, mode 0600, with
+      AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY of the KMS unseal user.
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Create the Vault config directory
+  ansible.builtin.file:
+    path: "{{ vault_config_dir }}"
+    state: directory
+    owner: root
+    group: vault
+    mode: "0750"
+
+- name: Create the Vault data and log directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: vault
+    group: vault
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ vault_data_dir }}"
+      mode: "0750"
+    # vault operator diagnose warns about any group or other access here.
+    - path: "{{ vault_data_dir }}/raft"
+      mode: "0700"
+    - path: "{{ vault_log_dir }}"
+      mode: "0750"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Issue the Vault certificate
+  ansible.builtin.include_role:
+    name: pki
+    tasks_from: leaf
+  vars:
+    pki_cert_name: vault
+    pki_cert_common_name: "{{ inventory_hostname }}"
+    pki_cert_subject_alt_names:
+      - DNS:{{ inventory_hostname }}
+      - DNS:{{ inventory_hostname }}.localdomain
+      - DNS:localhost
+      - IP:127.0.0.1
+      - IP:{{ vault_address }}
+    pki_cert_dir: "{{ vault_config_dir }}/tls"
+    pki_cert_group: vault
+    pki_cert_handler: Restart vault
+
+- name: Write the Vault config
+  ansible.builtin.template:
+    src: vault.hcl.j2
+    dest: "{{ vault_config_dir }}/vault.hcl"
+    owner: root
+    group: vault
+    mode: "0640"
+  notify: Restart vault
+
+- name: Install the Vault unit
+  ansible.builtin.template:
+    src: vault.service.j2
+    dest: /etc/systemd/system/vault.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd for vault
+    - Restart vault
+
+- name: Build logrotate without cron, because systemd runs its timer
+  ansible.builtin.copy:
+    content: "app-admin/logrotate -cron\n"
+    dest: /etc/portage/package.use/logrotate
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install logrotate
+  community.general.portage:
+    package: app-admin/logrotate
+
+- name: Rotate the audit log
+  ansible.builtin.template:
+    src: logrotate.j2
+    dest: /etc/logrotate.d/vault
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Enable the logrotate timer
+  ansible.builtin.systemd_service:
+    name: logrotate.timer
+    enabled: true
+    state: started
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Apply changed Vault files
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable Vault
+  ansible.builtin.systemd_service:
+    name: vault.service
+    enabled: true
+    state: started
+  ignore_errors: "{{ ansible_check_mode }}"

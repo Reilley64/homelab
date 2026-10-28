@@ -1,0 +1,36 @@
+[Unit]
+Description=Vault
+Documentation=https://developer.hashicorp.com/vault/docs
+Wants=network-online.target
+After=network-online.target
+ConditionFileNotEmpty={{ vault_config_dir }}/vault.hcl
+# Without internet at boot Vault cannot reach KMS and exits. Keep retrying.
+StartLimitIntervalSec=0
+
+[Service]
+Type=notify
+EnvironmentFile={{ vault_env_file }}
+User=vault
+Group=vault
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=yes
+PrivateDevices=yes
+SecureBits=keep-caps
+AmbientCapabilities=CAP_IPC_LOCK
+CapabilityBoundingSet=CAP_SYSLOG CAP_IPC_LOCK
+NoNewPrivileges=yes
+MemorySwapMax=0
+ExecStart=/usr/bin/vault server -config={{ vault_config_dir }}/vault.hcl
+ExecReload=/bin/kill --signal HUP $MAINPID
+KillMode=process
+KillSignal=SIGINT
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+LimitNOFILE=65536
+LimitMEMLOCK=infinity
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,22 @@
+[Unit]
+Description=Nomad
+Documentation=https://developer.hashicorp.com/nomad/docs
+Wants=network-online.target consul.service docker.service
+After=network-online.target consul.service vault.service docker.service
+
+[Service]
+# The leading dash lets Nomad start before the token exists during bootstrap.
+EnvironmentFile=-{{ nomad_env_file }}
+ExecStart=/usr/bin/nomad agent -config={{ nomad_config_dir }}
+ExecReload=/bin/kill --signal HUP $MAINPID
+KillMode=process
+KillSignal=SIGINT
+LimitNOFILE=65536
+LimitNPROC=infinity
+Restart=on-failure
+RestartSec=2
+TasksMax=infinity
+OOMScoreAdjust=-1000
+
+[Install]
+WantedBy=multi-user.target
