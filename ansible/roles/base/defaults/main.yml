@@ -2,6 +2,8 @@
 base_timezone: Australia/Melbourne
 base_locale: en_AU.UTF-8
 base_journald_system_max_use: 1G
+base_overlay_src: "{{ playbook_dir }}/../../overlay/"
+base_overlay_path: /var/db/repos/homelab
 base_packages:
   - app-admin/sudo
   - app-misc/fastfetch

@@ -20,6 +20,15 @@
     group: root
     mode: "0644"
 
+- name: Sync the homelab overlay
+  ansible.posix.synchronize:
+    src: "{{ base_overlay_src }}"
+    dest: "{{ base_overlay_path }}"
+    archive: true
+    owner: false
+    group: false
+    delete: true
+
 - name: Configure Portage
   ansible.builtin.template:
     src: "portage/{{ item }}.j2"
@@ -33,6 +42,7 @@
     - package.use/00video_cards
     - package.use/installkernal
     - repos.conf/gentoo.conf
+    - repos.conf/homelab.conf
     - binrepos.conf/gentoo.conf
 
 - name: Remove the Nomad keyword
