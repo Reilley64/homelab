@@ -4,10 +4,6 @@ locals {
       display_name = "Bitwarden"
       url          = format("https://bitwarden.%s", var.domain)
     }
-    immich = {
-      display_name = "Immich"
-      url          = format("https://immich.%s", var.domain)
-    }
     jellyfin = {
       display_name = "Jellyfin"
       url          = format("https://jellyfin.%s", var.domain)

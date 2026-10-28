@@ -27,7 +27,7 @@ Build every containerized service with `terraform/modules/service/`. It creates 
 
 ### File organization
 
-Each service domain has its own `.tf` file, such as `media.tf`, `torrents.tf`, `immich.tf` and `observability.tf`. Put a new service in the matching file, or create a new file for a new domain.
+Each service domain has its own `.tf` file, such as `media.tf`, `torrents.tf`, `tabletop.tf` and `observability.tf`. Put a new service in the matching file, or create a new file for a new domain.
 
 ### Networking
 
