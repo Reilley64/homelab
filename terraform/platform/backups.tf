@@ -24,3 +24,25 @@ resource "aws_iam_user_policy" "backup" {
   user   = aws_iam_user.backup.name
   policy = data.aws_iam_policy_document.backup.json
 }
+
+# The nightly backup on the host saves Vault and Nomad snapshots with these.
+# Consul snapshots need a management token, so Consul has no policy here.
+resource "vault_policy" "backup" {
+  name = "backup"
+
+  policy = <<-EOT
+    path "sys/storage/raft/snapshot" {
+      capabilities = ["read"]
+    }
+  EOT
+}
+
+resource "nomad_acl_policy" "backup" {
+  name        = "backup"
+  description = "Save Nomad snapshots"
+  rules_hcl   = <<-EOT
+    operator {
+      policy = "write"
+    }
+  EOT
+}

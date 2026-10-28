@@ -13,7 +13,8 @@
     that: backups_env.stat.exists
     fail_msg: >-
       {{ backups_env_file }} is missing. Create it by hand, mode 0600, with
-      RESTIC_PASSWORD, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
+      RESTIC_PASSWORD, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and the
+      snapshot tokens CONSUL_HTTP_TOKEN, VAULT_TOKEN and NOMAD_TOKEN.
 
 - name: Create the staging directories
   ansible.builtin.file:
@@ -25,6 +26,7 @@
   loop:
     - postgres
     - sqlite
+    - snapshots
 
 - name: Install the backup script
   ansible.builtin.template:

@@ -15,6 +15,17 @@ done
 sqlite3 -cmd '.timeout 30000' '{{ db.path }}' ".backup '$staging/sqlite/{{ db.name }}.db'"
 {% endfor %}
 
+# Control plane snapshots. A failure here does not stop restic, so appdata is
+# still saved while Vault or Nomad is down. The run still counts as failed and
+# leaves the success time alone, so the stale backup alert fires.
+export CONSUL_HTTP_ADDR=https://127.0.0.1:8501 VAULT_ADDR=https://127.0.0.1:8200 NOMAD_ADDR=https://127.0.0.1:4646
+rm -f "$staging"/snapshots/*
+snapshots_failed=0
+consul snapshot save "$staging/snapshots/consul.snap" >/dev/null || snapshots_failed=1
+# The Vault token is periodic, so each run renews it.
+{ vault token renew >/dev/null && vault operator raft snapshot save "$staging/snapshots/vault.snap"; } || snapshots_failed=1
+nomad operator snapshot save "$staging/snapshots/nomad.snap" >/dev/null || snapshots_failed=1
+
 excludes=(
 {% for path in backups_excludes %}
   --exclude '{{ path }}'
@@ -30,11 +41,13 @@ backup_to() {
   if [ "$(date +%u)" = 7 ]; then
     restic check --quiet || return 1
   fi
-  printf 'homelab_backup_last_success_timestamp_seconds{repository="%s"} %s\n' "$1" "$(date +%s)" >"$metrics.$1"
+  if [ "$snapshots_failed" = 0 ]; then
+    printf 'homelab_backup_last_success_timestamp_seconds{repository="%s"} %s\n' "$1" "$(date +%s)" >"$metrics.$1"
+  fi
 }
 
 # Each repository is tried even if another fails; a stale timestamp raises the alert.
-failed=0
+failed=$snapshots_failed
 {% for repo in backups_repositories %}
 (backup_to '{{ repo.name }}' '{{ repo.url }}') || failed=1
 {% endfor %}
