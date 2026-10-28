@@ -14,10 +14,9 @@ job "${name}" {
       progress_deadline = "6m"
     }
 
-    # Every task in the group shares this network namespace, as
-    # network_mode = "container:gluetun" did. Gluetun's firewall in this
-    # namespace is the kill switch for qBittorrent. qBittorrent must never get
-    # a network of its own.
+    # Every task in the group shares this network namespace. Gluetun's firewall
+    # in this namespace is the kill switch for qBittorrent. qBittorrent must
+    # never get a network of its own.
     network {
       mode = "bridge"
 

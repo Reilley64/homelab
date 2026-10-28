@@ -52,8 +52,7 @@ job "${name}" {
         EOT
       }
 
-      # The same dumps the backup script made with docker exec: globals, then
-      # one custom-format dump per database. They are written to the task
+      # Globals, then one custom-format dump per database. They are written to the task
       # directory first, so a failed run leaves the previous dumps in place.
       template {
         destination = "local/dump.sh"

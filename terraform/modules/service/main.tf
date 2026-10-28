@@ -87,8 +87,7 @@ resource "nomad_job" "job" {
   # Terraform waits for the deployment, so a failed canary fails the apply.
   detach = false
 
-  # Removing a module call removes the job and its history, as removing a
-  # container did.
+  # Removing a module call removes the job and its history.
   purge_on_destroy = true
 }
 
