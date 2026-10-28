@@ -40,37 +40,3 @@ module "cloudflare_ddns" {
 
   domain = var.domain
 }
-
-# The cutover apply forgets the Docker resources without deleting them, so
-# docker start brings them back on rollback.
-removed {
-  from = module.diun.docker_container.container
-
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = module.diun.docker_image.image
-
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = module.ddns.docker_container.container
-
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = module.ddns.docker_image.image
-
-  lifecycle {
-    destroy = false
-  }
-}

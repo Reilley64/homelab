@@ -20,29 +20,3 @@ module "arcto_vaultwarden" {
     "traefik.http.routers.arcto-vaultwarden.service=arcto-vaultwarden",
   ]
 }
-
-# The cutover apply forgets the Docker resources without deleting them, so
-# docker start brings them back on rollback.
-removed {
-  from = docker_container.vaultwarden
-
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = docker_image.arcto_vaultwarden
-
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = docker_network.arcto
-
-  lifecycle {
-    destroy = false
-  }
-}

@@ -30,29 +30,3 @@ module "postgres_dump" {
 
   domain = var.domain
 }
-
-# The cutover apply forgets the Docker resources without deleting them, so
-# docker start brings them back on rollback.
-removed {
-  from = module.postgres.docker_container.container
-
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = module.postgres.docker_image.image
-
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = docker_network.postgres
-
-  lifecycle {
-    destroy = false
-  }
-}

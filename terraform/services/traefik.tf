@@ -14,29 +14,3 @@ module "traefik" {
 
   domain = var.domain
 }
-
-# The cutover apply forgets the Docker resources without deleting them, so
-# docker start brings them back on rollback.
-removed {
-  from = module.traefik.docker_container.container
-
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = module.traefik.docker_image.image
-
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = docker_network.traefik
-
-  lifecycle {
-    destroy = false
-  }
-}

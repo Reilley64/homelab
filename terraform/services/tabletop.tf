@@ -61,16 +61,3 @@ module "tabletop" {
     "traefik.http.middlewares.tabletop-sign-in-limit.ratelimit.burst=5",
   ]
 }
-
-removed {
-  from = module.tabletop.docker_container.rolling
-
-  lifecycle {
-    destroy = false
-  }
-}
-
-moved {
-  from = module.tabletop.docker_image.image
-  to   = module.tabletop.docker_image.build[0]
-}
