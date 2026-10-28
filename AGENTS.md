@@ -11,7 +11,7 @@ A personal homelab on one Gentoo host, `homelab-1` (`192.168.86.199`). Consul, V
 | `ansible/` | The host: packages, mounts, node_exporter, backups, the CA and the Consul, Vault and Nomad agents |
 | `overlay/` | The Gentoo overlay with the `consul-bin`, `vault-bin` and `nomad-bin` ebuilds |
 | `terraform/platform/` | Consul, Vault and Nomad objects: ACL policies, namespaces, auth methods, the KMS auto-unseal key |
-| `terraform/services/` | The Nomad jobs, Cloudflare and UniFi DNS, Home Assistant's Consul registration and Grafana's configuration |
+| `terraform/services/` | The Nomad jobs, Cloudflare and UniFi DNS, Home Assistant's Consul registration and Grafana's configuration (`grafana.tf`) |
 | `terraform/modules/service/` | One service: its Nomad job, Traefik tags and DNS records |
 | `observability/` | `observability-agent`, a Go program that attributes Jellyfin egress to users. Built on the host |
 
@@ -53,6 +53,7 @@ Build every service with `modules/service/`. A module call's `name` is the job n
 - The job file is `terraform/services/jobs/{namespace}/{name}.nomad.hcl`, rendered with `templatefile`. The module passes `name`, `namespace`, `service`, `image`, `traefik_tags` and `env`, plus anything in `job_vars`.
 - `traefik = true` routes `{name}.localdomain` through Traefik and creates a UniFi A record.
 - `public = true` also routes `{name}.reilley.dev` with a Let's Encrypt certificate and creates a Cloudflare CNAME.
+- Every call passes `domain = var.domain` and `host_address = local.host_address`.
 - Put a service in the `.tf` file for its namespace, such as `media.tf` or `observability.tf`.
 
 ### Images
@@ -80,7 +81,8 @@ Terraform waits for each deployment, so a failed deployment fails the apply. A j
 
 - Prometheus discovers Nomad services tagged `metrics` through Consul. It also scrapes node_exporter (a host service), Consul, Nomad, Vault and the blackbox probes of the public services.
 - Alloy ships Jellyfin's log files to Loki. It also receives OTLP from services such as tabletop and passes metrics to Prometheus, logs to Loki and traces to Tempo. The module sets each task's OpenTelemetry service name and resource attributes.
-- The `grafana/grafana` provider in `observability.tf` manages Grafana's data sources, dashboards, contact points and alert rules. Make Grafana changes in Terraform, because the next apply reverts anything changed in the UI.
+- The `grafana/grafana` provider in `grafana.tf` manages Grafana's data sources, dashboards, contact points and alert rules. Make Grafana changes in Terraform, because the next apply reverts anything changed in the UI.
+- An alert is an entry in `local.alert_rule_groups` in `grafana.tf`: a Prometheus query, an `above` or `below` threshold, a `for` duration and a summary. Alerts go to Discord.
 
 ## Backups
 
