@@ -85,400 +85,152 @@ resource "grafana_contact_point" "discord" {
   }
 }
 
-resource "grafana_rule_group" "host_disk" {
-  name             = "Host disk"
-  folder_uid       = grafana_folder.homelab.uid
-  interval_seconds = 300
-
-  rule {
-    name           = "Gentoo box low disk space"
-    condition      = "B"
-    for            = "30m"
-    no_data_state  = "NoData"
-    exec_err_state = "Error"
-
-    annotations = {
-      summary = "192.168.86.199 has less than 50 GiB free on /"
-    }
-
-    labels = {
-      severity = "warning"
-    }
-
-    data {
-      ref_id         = "A"
-      datasource_uid = grafana_data_source.prometheus.uid
-
-      relative_time_range {
-        from = 600
-        to   = 0
-      }
-
-      model = jsonencode({
-        refId         = "A"
+# Every rule is an instant Prometheus query compared with a threshold. A rule
+# fires when the query's last value is above or below the threshold for the
+# rule's for duration. lookback defaults to 10 minutes.
+locals {
+  alert_rule_groups = {
+    host_disk = {
+      name             = "Host disk"
+      interval_seconds = 300
+      rules = [{
+        name          = "Gentoo box low disk space"
         expr          = "node_filesystem_avail_bytes{mountpoint=\"/\"}"
-        instant       = true
-        intervalMs    = 1000
-        maxDataPoints = 43200
-      })
+        below         = 53687091200
+        for           = "30m"
+        no_data_state = "NoData"
+        labels        = { severity = "warning" }
+        summary       = "192.168.86.199 has less than 50 GiB free on /"
+      }]
     }
 
-    data {
-      ref_id         = "B"
-      datasource_uid = "-100"
-
-      relative_time_range {
-        from = 0
-        to   = 0
-      }
-
-      model = jsonencode({
-        refId = "B"
-        type  = "classic_conditions"
-        datasource = {
-          type = "__expr__"
-          uid  = "-100"
-        }
-        conditions = [{
-          evaluator = { type = "lt", params = [53687091200] }
-          operator  = { type = "and" }
-          query     = { params = ["A"] }
-          reducer   = { type = "last", params = [] }
-          type      = "query"
-        }]
-        intervalMs    = 1000
-        maxDataPoints = 43200
-      })
-    }
-
-    notification_settings {
-      contact_point = grafana_contact_point.discord.name
-    }
-  }
-}
-
-resource "grafana_rule_group" "backups" {
-  name             = "Backups"
-  folder_uid       = grafana_folder.homelab.uid
-  interval_seconds = 300
-
-  rule {
-    name           = "Backup is stale"
-    condition      = "B"
-    for            = "15m"
-    no_data_state  = "Alerting"
-    exec_err_state = "Error"
-
-    annotations = {
-      summary = "The nightly restic backup to {{ $labels.repository }} has not succeeded for 36 hours. Check `journalctl -u homelab-backup` on 192.168.86.199."
-    }
-
-    labels = {
-      severity = "warning"
-    }
-
-    data {
-      ref_id         = "A"
-      datasource_uid = grafana_data_source.prometheus.uid
-
-      relative_time_range {
-        from = 600
-        to   = 0
-      }
-
-      model = jsonencode({
-        refId         = "A"
+    backups = {
+      name             = "Backups"
+      interval_seconds = 300
+      rules = [{
+        name          = "Backup is stale"
         expr          = "time() - homelab_backup_last_success_timestamp_seconds"
-        instant       = true
-        intervalMs    = 1000
-        maxDataPoints = 43200
-      })
+        above         = 129600
+        for           = "15m"
+        no_data_state = "Alerting"
+        labels        = { severity = "warning" }
+        summary       = "The nightly restic backup to {{ $labels.repository }} has not succeeded for 36 hours. Check `journalctl -u homelab-backup` on 192.168.86.199."
+      }]
     }
 
-    data {
-      ref_id         = "B"
-      datasource_uid = "-100"
-
-      relative_time_range {
-        from = 0
-        to   = 0
-      }
-
-      model = jsonencode({
-        refId = "B"
-        type  = "classic_conditions"
-        datasource = {
-          type = "__expr__"
-          uid  = "-100"
-        }
-        conditions = [{
-          evaluator = { type = "gt", params = [129600] }
-          operator  = { type = "and" }
-          query     = { params = ["A"] }
-          reducer   = { type = "last", params = [] }
-          type      = "query"
-        }]
-        intervalMs    = 1000
-        maxDataPoints = 43200
-      })
-    }
-
-    notification_settings {
-      contact_point = grafana_contact_point.discord.name
-    }
-  }
-}
-
-resource "grafana_rule_group" "vault" {
-  name             = "Vault"
-  folder_uid       = grafana_folder.homelab.uid
-  interval_seconds = 60
-
-  rule {
-    name           = "Vault is sealed"
-    condition      = "B"
-    for            = "5m"
-    no_data_state  = "Alerting"
-    exec_err_state = "Error"
-
-    annotations = {
-      summary = "Vault on 192.168.86.199 is sealed or not reporting metrics, so jobs that read secrets cannot start. It should unseal itself through AWS KMS. Check `journalctl -u vault` on 192.168.86.199."
-    }
-
-    labels = {
-      severity = "critical"
-    }
-
-    data {
-      ref_id         = "A"
-      datasource_uid = grafana_data_source.prometheus.uid
-
-      relative_time_range {
-        from = 600
-        to   = 0
-      }
-
-      # A sealed Vault may stop serving metrics, so a missing series counts
-      # as sealed.
-      model = jsonencode({
-        refId         = "A"
+    vault = {
+      name             = "Vault"
+      interval_seconds = 60
+      rules = [{
+        name = "Vault is sealed"
+        # A sealed Vault may stop serving metrics, so a missing series counts
+        # as sealed.
         expr          = "max(vault_core_unsealed{job=\"vault\"}) or on() vector(0)"
-        instant       = true
-        intervalMs    = 1000
-        maxDataPoints = 43200
-      })
+        below         = 1
+        for           = "5m"
+        no_data_state = "Alerting"
+        labels        = { severity = "critical" }
+        summary       = "Vault on 192.168.86.199 is sealed or not reporting metrics, so jobs that read secrets cannot start. It should unseal itself through AWS KMS. Check `journalctl -u vault` on 192.168.86.199."
+      }]
     }
 
-    data {
-      ref_id         = "B"
-      datasource_uid = "-100"
+    jellyfin_egress_attribution = {
+      name             = "Jellyfin egress attribution"
+      interval_seconds = 60
+      rules = [
+        {
+          name          = "Jellyfin session polling failing"
+          expr          = "increase(jellyfin_egress_jellyfin_api_failures_total[10m])"
+          above         = 0
+          for           = "15m"
+          no_data_state = "NoData"
+          labels        = { severity = "warning" }
+          summary       = "observability-agent cannot read Jellyfin /Sessions, so egress is not attributed to users. Check `nomad alloc logs -namespace observability -job observability-agent`."
+        },
+        {
+          name = "Jellyfin egress mostly unattributed"
+          # Only evaluated when at least 1 GB left in the hour, so scanners and
+          # idle periods don't count.
+          expr          = "(sum(increase(jellyfin_user_egress_bytes_v2_total{user=\"unknown\"}[1h])) / sum(increase(jellyfin_user_egress_bytes_v2_total[1h]))) and on() (sum(increase(jellyfin_user_egress_bytes_v2_total[1h])) > 1e9)"
+          lookback      = 3600
+          above         = 0.5
+          for           = "30m"
+          no_data_state = "OK"
+          labels        = { severity = "warning" }
+          summary       = format("Most public Jellyfin egress in the last hour has user=\"unknown\". Check that Jellyfin KnownProxies is %s and that Sessions show real client IPs.", local.jellyfin_known_proxy)
+        },
+      ]
+    }
 
-      relative_time_range {
-        from = 0
-        to   = 0
-      }
-
-      model = jsonencode({
-        refId = "B"
-        type  = "classic_conditions"
-        datasource = {
-          type = "__expr__"
-          uid  = "-100"
+    public_service_availability = {
+      name             = "Public service availability"
+      interval_seconds = 60
+      rules = [
+        for key, service in local.public_services : {
+          name          = format("%s public route unavailable", service.display_name)
+          expr          = format("probe_success{job=\"blackbox\", service=\"%s\"}", key)
+          below         = 1
+          for           = "5m"
+          no_data_state = "NoData"
+          labels        = { service = key, severity = "critical" }
+          summary       = format("%s public route is unavailable: %s", service.display_name, service.url)
         }
-        conditions = [{
-          evaluator = { type = "lt", params = [1] }
-          operator  = { type = "and" }
-          query     = { params = ["A"] }
-          reducer   = { type = "last", params = [] }
-          type      = "query"
-        }]
-        intervalMs    = 1000
-        maxDataPoints = 43200
-      })
+      ]
     }
 
-    notification_settings {
-      contact_point = grafana_contact_point.discord.name
+    public_service_tls = {
+      name             = "Public service TLS"
+      interval_seconds = 60
+      rules = [
+        for key, service in local.public_services : {
+          name          = format("%s TLS certificate expires soon", service.display_name)
+          expr          = format("(probe_ssl_earliest_cert_expiry{job=\"blackbox\", service=\"%s\"} - time()) / 86400", key)
+          below         = 14
+          for           = "5m"
+          no_data_state = "OK"
+          labels        = { service = key, severity = "warning" }
+          summary       = format("%s has fewer than 14 days of TLS validity remaining: %s", service.display_name, service.url)
+        }
+      ]
     }
   }
 }
 
-resource "grafana_rule_group" "jellyfin_egress_attribution" {
-  name             = "Jellyfin egress attribution"
+resource "grafana_rule_group" "alerts" {
+  for_each = local.alert_rule_groups
+
+  name             = each.value.name
   folder_uid       = grafana_folder.homelab.uid
-  interval_seconds = 60
-
-  rule {
-    name           = "Jellyfin session polling failing"
-    condition      = "B"
-    for            = "15m"
-    no_data_state  = "NoData"
-    exec_err_state = "Error"
-
-    annotations = {
-      summary = "observability-agent cannot read Jellyfin /Sessions, so egress is not attributed to users. Check `nomad alloc logs -namespace observability -job observability-agent`."
-    }
-
-    labels = {
-      severity = "warning"
-    }
-
-    data {
-      ref_id         = "A"
-      datasource_uid = grafana_data_source.prometheus.uid
-
-      relative_time_range {
-        from = 600
-        to   = 0
-      }
-
-      model = jsonencode({
-        refId         = "A"
-        expr          = "increase(jellyfin_egress_jellyfin_api_failures_total[10m])"
-        instant       = true
-        intervalMs    = 1000
-        maxDataPoints = 43200
-      })
-    }
-
-    data {
-      ref_id         = "B"
-      datasource_uid = "-100"
-
-      relative_time_range {
-        from = 0
-        to   = 0
-      }
-
-      model = jsonencode({
-        refId = "B"
-        type  = "classic_conditions"
-        datasource = {
-          type = "__expr__"
-          uid  = "-100"
-        }
-        conditions = [{
-          evaluator = { type = "gt", params = [0] }
-          operator  = { type = "and" }
-          query     = { params = ["A"] }
-          reducer   = { type = "last", params = [] }
-          type      = "query"
-        }]
-        intervalMs    = 1000
-        maxDataPoints = 43200
-      })
-    }
-
-    notification_settings {
-      contact_point = grafana_contact_point.discord.name
-    }
-  }
-
-  rule {
-    name           = "Jellyfin egress mostly unattributed"
-    condition      = "B"
-    for            = "30m"
-    no_data_state  = "OK"
-    exec_err_state = "Error"
-
-    annotations = {
-      summary = format("Most public Jellyfin egress in the last hour has user=\"unknown\". Check that Jellyfin KnownProxies is %s and that Sessions show real client IPs.", local.jellyfin_known_proxy)
-    }
-
-    labels = {
-      severity = "warning"
-    }
-
-    data {
-      ref_id         = "A"
-      datasource_uid = grafana_data_source.prometheus.uid
-
-      relative_time_range {
-        from = 3600
-        to   = 0
-      }
-
-      # Only evaluated when at least 1 GB left in the hour, so scanners and
-      # idle periods don't count.
-      model = jsonencode({
-        refId         = "A"
-        expr          = "(sum(increase(jellyfin_user_egress_bytes_v2_total{user=\"unknown\"}[1h])) / sum(increase(jellyfin_user_egress_bytes_v2_total[1h]))) and on() (sum(increase(jellyfin_user_egress_bytes_v2_total[1h])) > 1e9)"
-        instant       = true
-        intervalMs    = 1000
-        maxDataPoints = 43200
-      })
-    }
-
-    data {
-      ref_id         = "B"
-      datasource_uid = "-100"
-
-      relative_time_range {
-        from = 0
-        to   = 0
-      }
-
-      model = jsonencode({
-        refId = "B"
-        type  = "classic_conditions"
-        datasource = {
-          type = "__expr__"
-          uid  = "-100"
-        }
-        conditions = [{
-          evaluator = { type = "gt", params = [0.5] }
-          operator  = { type = "and" }
-          query     = { params = ["A"] }
-          reducer   = { type = "last", params = [] }
-          type      = "query"
-        }]
-        intervalMs    = 1000
-        maxDataPoints = 43200
-      })
-    }
-
-    notification_settings {
-      contact_point = grafana_contact_point.discord.name
-    }
-  }
-}
-
-resource "grafana_rule_group" "public_service_availability" {
-  name             = "Public service availability"
-  folder_uid       = grafana_folder.homelab.uid
-  interval_seconds = 60
+  interval_seconds = each.value.interval_seconds
 
   dynamic "rule" {
-    for_each = local.public_services
+    for_each = each.value.rules
 
     content {
-      name           = format("%s public route unavailable", rule.value.display_name)
+      name           = rule.value.name
       condition      = "B"
-      for            = "5m"
-      no_data_state  = "NoData"
+      for            = rule.value.for
+      no_data_state  = rule.value.no_data_state
       exec_err_state = "Error"
 
       annotations = {
-        summary = format("%s public route is unavailable: %s", rule.value.display_name, rule.value.url)
+        summary = rule.value.summary
       }
 
-      labels = {
-        service  = rule.key
-        severity = "critical"
-      }
+      labels = rule.value.labels
 
       data {
         ref_id         = "A"
         datasource_uid = grafana_data_source.prometheus.uid
 
         relative_time_range {
-          from = 600
+          from = try(rule.value.lookback, 600)
           to   = 0
         }
 
         model = jsonencode({
           refId         = "A"
-          expr          = format("probe_success{job=\"blackbox\", service=\"%s\"}", rule.key)
+          expr          = rule.value.expr
           instant       = true
           intervalMs    = 1000
           maxDataPoints = 43200
@@ -502,7 +254,7 @@ resource "grafana_rule_group" "public_service_availability" {
             uid  = "-100"
           }
           conditions = [{
-            evaluator = { type = "lt", params = [1] }
+            evaluator = can(rule.value.above) ? { type = "gt", params = [rule.value.above] } : { type = "lt", params = [rule.value.below] }
             operator  = { type = "and" }
             query     = { params = ["A"] }
             reducer   = { type = "last", params = [] }
@@ -520,84 +272,35 @@ resource "grafana_rule_group" "public_service_availability" {
   }
 }
 
-resource "grafana_rule_group" "public_service_tls" {
-  name             = "Public service TLS"
-  folder_uid       = grafana_folder.homelab.uid
-  interval_seconds = 60
-
-  dynamic "rule" {
-    for_each = local.public_services
-
-    content {
-      name           = format("%s TLS certificate expires soon", rule.value.display_name)
-      condition      = "B"
-      for            = "5m"
-      no_data_state  = "OK"
-      exec_err_state = "Error"
-
-      annotations = {
-        summary = format("%s has fewer than 14 days of TLS validity remaining: %s", rule.value.display_name, rule.value.url)
-      }
-
-      labels = {
-        service  = rule.key
-        severity = "warning"
-      }
-
-      data {
-        ref_id         = "A"
-        datasource_uid = grafana_data_source.prometheus.uid
-
-        relative_time_range {
-          from = 600
-          to   = 0
-        }
-
-        model = jsonencode({
-          refId         = "A"
-          expr          = format("(probe_ssl_earliest_cert_expiry{job=\"blackbox\", service=\"%s\"} - time()) / 86400", rule.key)
-          instant       = true
-          intervalMs    = 1000
-          maxDataPoints = 43200
-        })
-      }
-
-      data {
-        ref_id         = "B"
-        datasource_uid = "-100"
-
-        relative_time_range {
-          from = 0
-          to   = 0
-        }
-
-        model = jsonencode({
-          refId = "B"
-          type  = "classic_conditions"
-          datasource = {
-            type = "__expr__"
-            uid  = "-100"
-          }
-          conditions = [{
-            evaluator = { type = "lt", params = [14] }
-            operator  = { type = "and" }
-            query     = { params = ["A"] }
-            reducer   = { type = "last", params = [] }
-            type      = "query"
-          }]
-          intervalMs    = 1000
-          maxDataPoints = 43200
-        })
-      }
-
-      notification_settings {
-        contact_point = grafana_contact_point.discord.name
-      }
-    }
-  }
+moved {
+  from = grafana_rule_group.host_disk
+  to   = grafana_rule_group.alerts["host_disk"]
 }
 
-# --- grafana mcp ---
+moved {
+  from = grafana_rule_group.backups
+  to   = grafana_rule_group.alerts["backups"]
+}
+
+moved {
+  from = grafana_rule_group.vault
+  to   = grafana_rule_group.alerts["vault"]
+}
+
+moved {
+  from = grafana_rule_group.jellyfin_egress_attribution
+  to   = grafana_rule_group.alerts["jellyfin_egress_attribution"]
+}
+
+moved {
+  from = grafana_rule_group.public_service_availability
+  to   = grafana_rule_group.alerts["public_service_availability"]
+}
+
+moved {
+  from = grafana_rule_group.public_service_tls
+  to   = grafana_rule_group.alerts["public_service_tls"]
+}
 
 resource "grafana_service_account" "mcp_grafana" {
   depends_on = [module.grafana]
