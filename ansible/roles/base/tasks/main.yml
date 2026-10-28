@@ -45,22 +45,9 @@
     - repos.conf/homelab.conf
     - binrepos.conf/gentoo.conf
 
-- name: Remove the Nomad keyword
-  ansible.builtin.file:
-    path: /etc/portage/package.accept_keywords/nomad
-    state: absent
-
 - name: Install base packages
   community.general.portage:
     package: "{{ base_packages }}"
-
-- name: Remove the Gentoo tree HashiCorp packages
-  community.general.portage:
-    package:
-      - app-admin/consul
-      - app-admin/vault
-      - sys-cluster/nomad
-    state: absent
 
 - name: Allow wheel to use sudo without a password
   ansible.builtin.lineinfile:
