@@ -40,15 +40,12 @@ job "${name}" {
       provider = "consul"
       tags     = ${jsonencode(traefik_tags)}
 
+      # No check_restart: a restart signal reaches gluetun too, and gluetun
+      # already restarts the tunnel itself when its own health check fails.
       check {
         type     = "tcp"
         interval = "10s"
         timeout  = "2s"
-
-        check_restart {
-          limit = 3
-          grace = "30s"
-        }
       }
     }
 
@@ -73,6 +70,12 @@ job "${name}" {
       config {
         image   = "${gluetun_image}"
         cap_add = ["net_admin"]
+
+        # The group's network namespace outlives the task. If gluetun stops
+        # without cleaning up, its routing rules stay behind and the next start
+        # fails with "adding IPv6 rule: file exists", so clear them first.
+        entrypoint = ["/bin/sh", "-c"]
+        args       = ["ip rule del table 51820 2>/dev/null; ip -6 rule del table 51820 2>/dev/null; exec /gluetun-entrypoint"]
 
         devices = [
           {
