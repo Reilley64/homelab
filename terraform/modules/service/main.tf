@@ -27,7 +27,6 @@ locals {
       "service.instance.id" = "$${NOMAD_ALLOC_ID}"
     },
     local.image_tag == null ? {} : { "service.version" = local.image_tag },
-    var.otel_resource_attributes,
   )
 
   env = merge(var.env, {

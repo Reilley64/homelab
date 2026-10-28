@@ -109,11 +109,3 @@ variable "host_ip" {
   default     = "192.168.86.199"
   description = "Address the {name}.localdomain A record resolves to. Every service is fronted by Traefik on this host."
 }
-
-# --- telemetry ---
-
-variable "otel_resource_attributes" {
-  type        = map(string)
-  default     = {}
-  description = "Extra OpenTelemetry resource attributes. The module sets service.namespace, service.instance.id and service.version."
-}
