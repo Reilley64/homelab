@@ -1,17 +1,11 @@
 # Grafana's configuration. The job is in observability.tf.
-
-# The job is healthy when the module returns, but Traefik needs a moment to
-# pick the route up from Consul before the Grafana provider can reach it.
-resource "time_sleep" "grafana_ready" {
-  create_duration = "30s"
-
-  triggers = {
-    jobspec = sha256(module.grafana.jobspec)
-  }
-}
+#
+# The resources that reach Grafana first depend on module.grafana, so they
+# wait for its deployment to be healthy. That takes passing checks for
+# min_healthy_time, and Traefik watches Consul, so the route is up by then.
 
 resource "grafana_data_source" "loki" {
-  depends_on = [time_sleep.grafana_ready]
+  depends_on = [module.grafana]
 
   type = "loki"
   name = "Loki"
@@ -34,7 +28,7 @@ resource "grafana_data_source" "loki" {
 }
 
 resource "grafana_data_source" "prometheus" {
-  depends_on = [time_sleep.grafana_ready]
+  depends_on = [module.grafana]
 
   type       = "prometheus"
   name       = "Prometheus"
@@ -44,7 +38,7 @@ resource "grafana_data_source" "prometheus" {
 }
 
 resource "grafana_data_source" "tempo" {
-  depends_on = [time_sleep.grafana_ready]
+  depends_on = [module.grafana]
 
   type = "tempo"
   name = "Tempo"
@@ -64,7 +58,7 @@ resource "grafana_data_source" "tempo" {
 }
 
 resource "grafana_folder" "homelab" {
-  depends_on = [time_sleep.grafana_ready]
+  depends_on = [module.grafana]
 
   title = "Homelab"
 }
@@ -80,7 +74,7 @@ resource "grafana_dashboard" "jellyfin" {
 # --- alerting ---
 
 resource "grafana_contact_point" "discord" {
-  depends_on = [time_sleep.grafana_ready]
+  depends_on = [module.grafana]
 
   name = "Discord"
 
@@ -606,7 +600,7 @@ resource "grafana_rule_group" "public_service_tls" {
 # --- grafana mcp ---
 
 resource "grafana_service_account" "mcp_grafana" {
-  depends_on = [time_sleep.grafana_ready]
+  depends_on = [module.grafana]
 
   name = "mcp-grafana"
   role = "Viewer"
