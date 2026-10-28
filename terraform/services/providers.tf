@@ -2,6 +2,10 @@ provider "docker" {
   host = format("ssh://%s@192.168.86.199", var.username)
 }
 
+# Reads NOMAD_ADDR, NOMAD_TOKEN and NOMAD_CACERT from the environment, as in the
+# platform root, so no token reaches a variable or the state.
+provider "nomad" {}
+
 provider "cloudflare" {
   api_token = var.cloudflare_api_token
 }

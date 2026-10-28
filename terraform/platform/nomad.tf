@@ -24,3 +24,18 @@ resource "nomad_namespace" "this" {
   name        = each.key
   description = each.value
 }
+
+# Tasks reserve their usual memory and may burst to memory_max, which needs
+# oversubscription. The other values are Nomad's defaults, which the resource
+# would otherwise reset.
+resource "nomad_scheduler_config" "this" {
+  scheduler_algorithm             = "binpack"
+  memory_oversubscription_enabled = true
+
+  preemption_config = {
+    system_scheduler_enabled   = true
+    sysbatch_scheduler_enabled = true
+    batch_scheduler_enabled    = false
+    service_scheduler_enabled  = false
+  }
+}

@@ -27,55 +27,50 @@ locals {
 module "tabletop" {
   source = "../modules/service"
 
-  domain             = var.domain
-  name               = "tabletop"
-  image              = format("tabletop:%s", local.tabletop_image_tag)
-  port               = 3000
-  public             = true
-  cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
-  networks           = [docker_network.postgres.id, docker_network.s3.id, docker_network.traefik.id, docker_network.observability.id]
+  name      = "tabletop"
+  namespace = "tabletop"
+  image     = format("tabletop:%s", local.tabletop_image_tag)
 
   build = {
     context = local.tabletop_repository
+    labels = {
+      "org.opencontainers.image.revision" = local.tabletop_commit
+      "org.opencontainers.image.version"  = local.tabletop_image_tag
+    }
   }
 
-  rolling = {
-    healthcheck = ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/3000 && printf 'GET /health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && head -n 1 <&3 | grep -q ' 200 '"]
+  job_file = format("%s/jobs/tabletop/tabletop.nomad.hcl", path.module)
+  job_vars = {
+    public_url    = format("https://%s", local.tabletop_hostname)
+    database_user = var.username
   }
+  env = local.shared_env
 
-  env = concat(local.shared_env, [
-    "ENVIRONMENT=production",
-    format("DATABASE_URL=postgresql://%s:%s@postgres:5432/tabletop", urlencode(var.username), urlencode(var.password)),
-    format("PUBLIC_URL=https://%s", local.tabletop_hostname),
-    format("PLAYER_PASSWORD=%s", var.password),
-    format("SIGNING_KEY=%s", var.tabletop_signing_key),
-    "S3__ENDPOINT=http://s3:8080",
-    "S3__BUCKET=tabletop",
-    "S3__REGION=us-east-1",
-    format("S3__ACCESS_KEY_ID=%s", random_password.s3_access_key["tabletop"].result),
-    format("S3__SECRET_ACCESS_KEY=%s", random_password.s3_secret_key["tabletop"].result),
-    "RCLONE__URL=http://s3:5572",
-    "RCLONE__USER=rc",
-    format("RCLONE__PASSWORD=%s", random_password.s3_rc_password.result),
-    "RCLONE__REMOTE=nas:S3",
-    "OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4317",
-    "OTEL_EXPORTER_OTLP_PROTOCOL=grpc",
-  ])
+  domain             = var.domain
+  public             = true
+  cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
 
-  otel_resource_attributes = {
-    "container.image.name"  = "tabletop"
-    "container.image.tags"  = local.tabletop_image_tag
-    "vcs.ref.head.revision" = local.tabletop_commit
+  traefik_tags = [
+    format("traefik.http.routers.tabletop-sign-in.rule=Host(`%s`) && Method(`POST`) && (Path(`/authorize`) || Path(`/login`))", local.tabletop_hostname),
+    "traefik.http.routers.tabletop-sign-in.entrypoints=websecure",
+    "traefik.http.routers.tabletop-sign-in.tls.certresolver=myresolver",
+    "traefik.http.routers.tabletop-sign-in.service=tabletop",
+    "traefik.http.routers.tabletop-sign-in.middlewares=tabletop-sign-in-limit",
+    "traefik.http.middlewares.tabletop-sign-in-limit.ratelimit.average=5",
+    "traefik.http.middlewares.tabletop-sign-in-limit.ratelimit.period=1m",
+    "traefik.http.middlewares.tabletop-sign-in-limit.ratelimit.burst=5",
+  ]
+}
+
+removed {
+  from = module.tabletop.docker_container.rolling
+
+  lifecycle {
+    destroy = false
   }
+}
 
-  labels = {
-    "traefik.http.routers.tabletop-sign-in.rule"                        = format("Host(`%s`) && Method(`POST`) && (Path(`/authorize`) || Path(`/login`))", local.tabletop_hostname)
-    "traefik.http.routers.tabletop-sign-in.entrypoints"                 = "websecure"
-    "traefik.http.routers.tabletop-sign-in.tls.certresolver"            = "myresolver"
-    "traefik.http.routers.tabletop-sign-in.service"                     = "tabletop"
-    "traefik.http.routers.tabletop-sign-in.middlewares"                 = "tabletop-sign-in-limit,tabletop-retry"
-    "traefik.http.middlewares.tabletop-sign-in-limit.ratelimit.average" = "5"
-    "traefik.http.middlewares.tabletop-sign-in-limit.ratelimit.period"  = "1m"
-    "traefik.http.middlewares.tabletop-sign-in-limit.ratelimit.burst"   = "5"
-  }
+moved {
+  from = module.tabletop.docker_image.image
+  to   = module.tabletop.docker_image.build[0]
 }

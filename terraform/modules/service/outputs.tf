@@ -1,3 +1,4 @@
-output "id" {
-  value = one(concat(docker_container.container[*].id, docker_container.rolling[*].id))
+output "jobspec" {
+  value       = local.jobspec
+  description = "The rendered job, for nomad job plan while debugging."
 }

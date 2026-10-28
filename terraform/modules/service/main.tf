@@ -2,272 +2,75 @@ locals {
   route          = coalesce(var.route_name, var.name)
   hostname       = format("%s.%s", local.route, var.domain)
   local_hostname = format("%s.localdomain", local.route)
+  routed         = var.traefik || var.public
 
-  base_labels = {
-    "diun.enable"            = true
-    "traefik.docker.network" = "traefik"
-  }
+  traefik_local_tags = local.routed ? [
+    "traefik.enable=true",
+    format("traefik.http.routers.%slocal.rule=Host(`%s`)", local.route, local.local_hostname),
+    format("traefik.http.routers.%slocal.entrypoints=web", local.route),
+    format("traefik.http.routers.%slocal.service=%s", local.route, local.route),
+  ] : []
 
-  traefik_backend_label = var.url != null ? {
-    (format("traefik.http.services.%s.loadbalancer.server.url", local.route)) = var.url
-    } : var.port != null ? {
-    (format("traefik.http.services.%s.loadbalancer.server.port", local.route)) = var.port
-  } : {}
+  traefik_public_tags = var.public ? [
+    format("traefik.http.routers.%s.rule=Host(`%s`)", local.route, local.hostname),
+    format("traefik.http.routers.%s.entrypoints=websecure", local.route),
+    format("traefik.http.routers.%s.tls.certresolver=myresolver", local.route),
+    format("traefik.http.routers.%s.service=%s", local.route, local.route),
+  ] : []
 
-  traefik_public_labels = var.public ? {
-    (format("traefik.http.routers.%s.rule", local.route))             = format("Host(`%s`)", local.hostname)
-    (format("traefik.http.routers.%s.entrypoints", local.route))      = "websecure"
-    (format("traefik.http.routers.%s.tls.certresolver", local.route)) = "myresolver"
-    (format("traefik.http.routers.%s.service", local.route))          = local.route
-  } : {}
+  image_tag = one(regexall(":([^:/@]+)$", var.image)[*][0])
 
-  traefik_local_labels = length(local.traefik_backend_label) > 0 ? {
-    (format("traefik.http.routers.%slocal.rule", local.route))        = format("Host(`%s`)", local.local_hostname)
-    (format("traefik.http.routers.%slocal.entrypoints", local.route)) = "web"
-    (format("traefik.http.routers.%slocal.service", local.route))     = local.route
-  } : {}
-
-  # Retries requests that reach the old container while it shuts down.
-  rolling_labels = var.rolling == null ? {} : merge(
-    { (format("traefik.http.middlewares.%s-retry.retry.attempts", local.route)) = "2" },
-    var.public ? { (format("traefik.http.routers.%s.middlewares", local.route)) = format("%s-retry", local.route) } : {},
-    length(local.traefik_local_labels) > 0 ? { (format("traefik.http.routers.%slocal.middlewares", local.route)) = format("%s-retry", local.route) } : {},
-  )
-
-  labels = merge(
-    local.base_labels,
-    local.traefik_backend_label,
-    local.traefik_public_labels,
-    local.traefik_local_labels,
-    local.rolling_labels,
-    var.labels
-  )
-
-  # Each replacement needs a new name, because the old container still runs
-  # while the new one starts. This hash must cover every argument of
-  # docker_container.rolling that forces a replacement.
-  rolling_name = format("%s-%s", var.name, substr(nonsensitive(sha256(jsonencode([
-    docker_image.image.image_id,
-    local.labels,
-    var.rolling,
-    var.networks,
-    var.ipv4_addresses,
-    var.forward,
-    var.ports,
-    var.env,
+  # Nomad fills in the allocation ID at runtime, hence the escaped interpolation.
+  otel_resource_attributes = merge(
+    {
+      "service.namespace"   = var.namespace
+      "service.instance.id" = "$${NOMAD_ALLOC_ID}"
+    },
+    local.image_tag == null ? {} : { "service.version" = local.image_tag },
     var.otel_resource_attributes,
-    var.command,
-    var.user,
-    var.privileged,
-    var.capabilities,
-    var.cpus,
-    var.memory,
-    var.memory_swap,
-    var.devices,
-    var.volumes,
-    var.uploads,
-  ]))), 0, 8))
+  )
 
-  container_name = var.rolling == null ? var.name : local.rolling_name
+  env = merge(var.env, {
+    OTEL_SERVICE_NAME = local.route
+    OTEL_RESOURCE_ATTRIBUTES = join(",", [
+      for key, value in local.otel_resource_attributes : format("%s=%s", key, value)
+    ])
+  })
 
-  env = length(var.otel_resource_attributes) == 0 ? var.env : concat(var.env, [
-    format("OTEL_RESOURCE_ATTRIBUTES=%s", join(",", [
-      for key, value in merge(var.otel_resource_attributes, { "container.name" = local.container_name }) :
-      format("%s=%s", key, value)
-    ])),
-  ])
+  jobspec = templatefile(var.job_file, merge(var.job_vars, {
+    name         = var.name
+    namespace    = var.namespace
+    service      = local.route
+    image        = var.build == null ? var.image : docker_image.build[0].name
+    traefik_tags = concat(local.traefik_local_tags, local.traefik_public_tags, var.traefik_tags)
+    env          = local.env
+  }))
 }
 
-data "docker_registry_image" "image" {
-  count = var.build == null ? 1 : 0
+resource "docker_image" "build" {
+  count = var.build == null ? 0 : 1
 
-  name = var.image
-}
+  name         = var.image
+  triggers     = var.build.triggers
+  keep_locally = true
 
-resource "docker_image" "image" {
-  name          = var.image
-  pull_triggers = var.build == null ? [data.docker_registry_image.image[0].sha256_digest] : null
-  triggers      = var.build == null ? null : var.build.triggers
-  keep_locally  = true
-
-  dynamic "build" {
-    for_each = var.build == null ? [] : [var.build]
-    content {
-      context            = build.value.context
-      dockerfile         = build.value.dockerfile
-      use_legacy_builder = true
-    }
+  build {
+    context            = var.build.context
+    dockerfile         = var.build.dockerfile
+    label              = var.build.labels
+    use_legacy_builder = true
   }
 }
 
-resource "docker_container" "container" {
-  count = var.rolling == null ? 1 : 0
+resource "nomad_job" "job" {
+  jobspec = local.jobspec
 
-  name    = var.name
-  image   = docker_image.image.image_id
-  restart = "unless-stopped"
+  # Terraform waits for the deployment, so a failed canary fails the apply.
+  detach = false
 
-  dynamic "labels" {
-    for_each = local.labels
-    content {
-      label = labels.key
-      value = labels.value
-    }
-  }
-
-  network_mode = var.forward
-
-  dynamic "networks_advanced" {
-    for_each = var.networks
-    content {
-      name         = networks_advanced.value
-      ipv4_address = lookup(var.ipv4_addresses, networks_advanced.value, null)
-    }
-  }
-
-  dynamic "ports" {
-    for_each = var.ports
-    content {
-      internal = ports.value.internal_port
-      external = ports.value.external_port
-    }
-  }
-
-  env         = local.env
-  command     = var.command
-  user        = var.user
-  privileged  = var.privileged
-  cpus        = var.cpus
-  memory      = var.memory
-  memory_swap = var.memory_swap
-
-  dynamic "capabilities" {
-    for_each = length(var.capabilities) > 0 ? [1] : []
-    content {
-      add  = var.capabilities
-      drop = []
-    }
-  }
-
-  dynamic "devices" {
-    for_each = var.devices
-    content {
-      container_path = devices.value.container_path
-      host_path      = devices.value.host_path
-      permissions    = "rwm"
-    }
-  }
-
-  dynamic "volumes" {
-    for_each = var.volumes
-    content {
-      container_path = volumes.value.container_path
-      host_path      = volumes.value.host_path
-      read_only      = volumes.value.read_only
-    }
-  }
-
-  dynamic "upload" {
-    for_each = var.uploads
-    content {
-      file    = upload.value.file
-      content = upload.value.content
-    }
-  }
-}
-
-# The same container as docker_container.container, created before the old one
-# is destroyed and checked for health before Terraform moves on. Traefik ignores
-# a container until its healthcheck passes, so traffic moves over without a gap.
-resource "docker_container" "rolling" {
-  count = var.rolling == null ? 0 : 1
-
-  name    = local.rolling_name
-  image   = docker_image.image.image_id
-  restart = "unless-stopped"
-  wait    = true
-
-  healthcheck {
-    test           = var.rolling.healthcheck
-    interval       = "30s"
-    timeout        = "5s"
-    retries        = 3
-    start_period   = "1m0s"
-    start_interval = "1s"
-  }
-
-  dynamic "labels" {
-    for_each = local.labels
-    content {
-      label = labels.key
-      value = labels.value
-    }
-  }
-
-  network_mode = var.forward
-
-  dynamic "networks_advanced" {
-    for_each = var.networks
-    content {
-      name         = networks_advanced.value
-      ipv4_address = lookup(var.ipv4_addresses, networks_advanced.value, null)
-      aliases      = [var.name]
-    }
-  }
-
-  dynamic "ports" {
-    for_each = var.ports
-    content {
-      internal = ports.value.internal_port
-      external = ports.value.external_port
-    }
-  }
-
-  env         = local.env
-  command     = var.command
-  user        = var.user
-  privileged  = var.privileged
-  cpus        = var.cpus
-  memory      = var.memory
-  memory_swap = var.memory_swap
-
-  dynamic "capabilities" {
-    for_each = length(var.capabilities) > 0 ? [1] : []
-    content {
-      add  = var.capabilities
-      drop = []
-    }
-  }
-
-  dynamic "devices" {
-    for_each = var.devices
-    content {
-      container_path = devices.value.container_path
-      host_path      = devices.value.host_path
-      permissions    = "rwm"
-    }
-  }
-
-  dynamic "volumes" {
-    for_each = var.volumes
-    content {
-      container_path = volumes.value.container_path
-      host_path      = volumes.value.host_path
-      read_only      = volumes.value.read_only
-    }
-  }
-
-  dynamic "upload" {
-    for_each = var.uploads
-    content {
-      file    = upload.value.file
-      content = upload.value.content
-    }
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
+  # Removing a module call removes the job and its history, as removing a
+  # container did.
+  purge_on_destroy = true
 }
 
 resource "cloudflare_dns_record" "dns" {
@@ -282,7 +85,7 @@ resource "cloudflare_dns_record" "dns" {
 }
 
 resource "unifi_dns_record" "local" {
-  count = length(local.traefik_local_labels) > 0 || var.local_dns ? 1 : 0
+  count = local.routed || var.local_dns ? 1 : 0
 
   name        = local.local_hostname
   record_type = "A"

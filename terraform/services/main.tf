@@ -1,9 +1,9 @@
 locals {
-  shared_env = [
-    "TZ=Australia/Melbourne",
-    format("PGID=%s", var.gid),
-    format("PUID=%s", var.uid),
-  ]
+  shared_env = {
+    TZ   = "Australia/Melbourne"
+    PGID = var.gid
+    PUID = var.uid
+  }
 }
 
 resource "docker_image" "alpine" {
