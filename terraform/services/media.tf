@@ -1,9 +1,7 @@
 locals {
-  # REHEARSAL CHECK: the address Jellyfin sees Traefik connect from. It goes
-  # into KnownProxies in appdata/jellyfin/network.xml by hand at the cutover.
-  # Traefik reaches Jellyfin on the internal host network, so this should be
-  # 10.91.0.1. If Jellyfin's logs show the bridge gateway 10.90.0.1 instead,
-  # change it here and in network.xml.
+  # The address Jellyfin sees Traefik connect from, on the internal host
+  # network. It must match KnownProxies in appdata/jellyfin/network.xml, which
+  # Jellyfin owns, so change both together.
   jellyfin_known_proxy = "10.91.0.1"
 }
 

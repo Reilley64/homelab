@@ -87,7 +87,7 @@ resource "consul_acl_policy" "nomad_agent" {
   EOT
 }
 
-# Agent metrics now; service and node reads for consul_sd_configs in phase 3.
+# Agent metrics, plus service and node reads for consul_sd_configs.
 resource "consul_acl_policy" "prometheus" {
   name        = "prometheus"
   description = "Prometheus metrics and service discovery"

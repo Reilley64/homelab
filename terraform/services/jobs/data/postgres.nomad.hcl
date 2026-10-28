@@ -69,7 +69,7 @@ job "${name}" {
       }
 
       # The image reads the password only when it initialises an empty data
-      # directory, such as a rehearsal copy.
+      # directory.
       template {
         destination = "secrets/app.env"
         env         = true
