@@ -33,6 +33,8 @@
           - cRLSign
         key_usage_critical: true
       register: pki_ca_csr
+      # The CSR only feeds the next task, which decides whether anything changes.
+      changed_when: false
 
     - name: Self-sign the CA certificate
       community.crypto.x509_certificate:

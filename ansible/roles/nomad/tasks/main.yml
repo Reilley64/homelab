@@ -36,6 +36,14 @@
     name: br_netfilter
     state: present
 
+- name: Create the sysctl drop-in directory
+  ansible.builtin.file:
+    path: /etc/sysctl.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Send bridge traffic through iptables
   ansible.builtin.copy:
     src: 90-nomad-bridge.conf
