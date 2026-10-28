@@ -219,8 +219,13 @@ module "prometheus" {
     {
       file = "/etc/prometheus/prometheus.yml"
       content = templatefile(format("%s/config/prometheus.yml.tftpl", path.module), {
-        public_services = local.public_services
+        public_services      = local.public_services
+        consul_metrics_token = var.consul_metrics_token
       })
+    },
+    {
+      file    = "/etc/prometheus/ca.crt"
+      content = file(pathexpand("~/.homelab/pki/ca.crt"))
     },
   ]
 
@@ -506,6 +511,80 @@ resource "grafana_rule_group" "backups" {
         }
         conditions = [{
           evaluator = { type = "gt", params = [129600] }
+          operator  = { type = "and" }
+          query     = { params = ["A"] }
+          reducer   = { type = "last", params = [] }
+          type      = "query"
+        }]
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    notification_settings {
+      contact_point = grafana_contact_point.discord.name
+    }
+  }
+}
+
+resource "grafana_rule_group" "vault" {
+  name             = "Vault"
+  folder_uid       = grafana_folder.homelab.uid
+  interval_seconds = 60
+
+  rule {
+    name           = "Vault is sealed"
+    condition      = "B"
+    for            = "5m"
+    no_data_state  = "Alerting"
+    exec_err_state = "Error"
+
+    annotations = {
+      summary = "Vault on 192.168.86.199 is sealed or not reporting metrics, so jobs that read secrets cannot start. It should unseal itself through AWS KMS. Check `journalctl -u vault` on 192.168.86.199."
+    }
+
+    labels = {
+      severity = "critical"
+    }
+
+    data {
+      ref_id         = "A"
+      datasource_uid = grafana_data_source.prometheus.uid
+
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+
+      # A sealed Vault may stop serving metrics, so a missing series counts
+      # as sealed.
+      model = jsonencode({
+        refId         = "A"
+        expr          = "max(vault_core_unsealed{job=\"vault\"}) or on() vector(0)"
+        instant       = true
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    data {
+      ref_id         = "B"
+      datasource_uid = "-100"
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+
+      model = jsonencode({
+        refId = "B"
+        type  = "classic_conditions"
+        datasource = {
+          type = "__expr__"
+          uid  = "-100"
+        }
+        conditions = [{
+          evaluator = { type = "lt", params = [1] }
           operator  = { type = "and" }
           query     = { params = ["A"] }
           reducer   = { type = "last", params = [] }

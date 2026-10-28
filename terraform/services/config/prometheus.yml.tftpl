@@ -28,6 +28,41 @@ scrape_configs:
     static_configs:
       - targets: ["localhost:9090"]
 
+  # The control plane on the host. Static targets until phase 3 moves
+  # discovery to consul_sd_configs.
+  - job_name: consul
+    scheme: https
+    metrics_path: /v1/agent/metrics
+    params:
+      format: [prometheus]
+    authorization:
+      credentials: "${consul_metrics_token}"
+    tls_config:
+      ca_file: /etc/prometheus/ca.crt
+    static_configs:
+      - targets: ["192.168.86.199:8501"]
+
+  - job_name: nomad
+    scheme: https
+    metrics_path: /v1/metrics
+    params:
+      format: [prometheus]
+    tls_config:
+      ca_file: /etc/prometheus/ca.crt
+    static_configs:
+      - targets: ["192.168.86.199:4646"]
+
+  # Vault's listener allows unauthenticated metrics access.
+  - job_name: vault
+    scheme: https
+    metrics_path: /v1/sys/metrics
+    params:
+      format: [prometheus]
+    tls_config:
+      ca_file: /etc/prometheus/ca.crt
+    static_configs:
+      - targets: ["192.168.86.199:8200"]
+
   - job_name: blackbox
     scrape_interval: 60s
     scrape_timeout: 15s

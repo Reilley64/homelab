@@ -72,3 +72,9 @@ variable "wireguard_private_key" {
   type      = string
   sensitive = true
 }
+
+variable "consul_metrics_token" {
+  type        = string
+  sensitive   = true
+  description = "Secret of a Consul token with the prometheus policy from the platform root."
+}
