@@ -1,4 +1,7 @@
 locals {
+  # homelab-1's LAN address. Ansible's inventory holds its own copy.
+  host_address = "192.168.86.199"
+
   shared_env = {
     TZ   = "Australia/Melbourne"
     PGID = var.gid
@@ -22,7 +25,8 @@ module "diun" {
   job_file = format("%s/jobs/ops/diun.nomad.hcl", path.module)
   env      = local.shared_env
 
-  domain = var.domain
+  domain       = var.domain
+  host_address = local.host_address
 }
 
 module "cloudflare_ddns" {
@@ -38,5 +42,6 @@ module "cloudflare_ddns" {
   }
   env = local.shared_env
 
-  domain = var.domain
+  domain       = var.domain
+  host_address = local.host_address
 }

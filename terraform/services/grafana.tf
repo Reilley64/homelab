@@ -100,7 +100,7 @@ locals {
         for           = "30m"
         no_data_state = "NoData"
         labels        = { severity = "warning" }
-        summary       = "192.168.86.199 has less than 50 GiB free on /"
+        summary       = format("%s has less than 50 GiB free on /", local.host_address)
       }]
     }
 
@@ -114,7 +114,7 @@ locals {
         for           = "15m"
         no_data_state = "Alerting"
         labels        = { severity = "warning" }
-        summary       = "The nightly restic backup to {{ $labels.repository }} has not succeeded for 36 hours. Check `journalctl -u homelab-backup` on 192.168.86.199."
+        summary       = format("The nightly restic backup to {{ $labels.repository }} has not succeeded for 36 hours. Check `journalctl -u homelab-backup` on %s.", local.host_address)
       }]
     }
 
@@ -130,7 +130,7 @@ locals {
         for           = "5m"
         no_data_state = "Alerting"
         labels        = { severity = "critical" }
-        summary       = "Vault on 192.168.86.199 is sealed or not reporting metrics, so jobs that read secrets cannot start. It should unseal itself through AWS KMS. Check `journalctl -u vault` on 192.168.86.199."
+        summary       = format("Vault on %[1]s is sealed or not reporting metrics, so jobs that read secrets cannot start. It should unseal itself through AWS KMS. Check `journalctl -u vault` on %[1]s.", local.host_address)
       }]
     }
 

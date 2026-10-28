@@ -19,6 +19,7 @@ module "jellyfin" {
   env = local.shared_env
 
   domain             = var.domain
+  host_address       = local.host_address
   public             = true
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
 }
@@ -39,8 +40,9 @@ module "radarr" {
   }
   env = local.shared_env
 
-  domain  = var.domain
-  traefik = true
+  domain       = var.domain
+  host_address = local.host_address
+  traefik      = true
 }
 
 module "sonarr" {
@@ -59,8 +61,9 @@ module "sonarr" {
   }
   env = local.shared_env
 
-  domain  = var.domain
-  traefik = true
+  domain       = var.domain
+  host_address = local.host_address
+  traefik      = true
 }
 
 module "seerr" {
@@ -74,6 +77,7 @@ module "seerr" {
   env      = local.shared_env
 
   domain             = var.domain
+  host_address       = local.host_address
   public             = true
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
 }
@@ -88,8 +92,9 @@ module "prowlarr" {
   job_file = format("%s/jobs/media/prowlarr.nomad.hcl", path.module)
   env      = local.shared_env
 
-  domain  = var.domain
-  traefik = true
+  domain       = var.domain
+  host_address = local.host_address
+  traefik      = true
 }
 
 module "flaresolverr" {
@@ -102,8 +107,9 @@ module "flaresolverr" {
   job_file = format("%s/jobs/media/flaresolverr.nomad.hcl", path.module)
   env      = local.shared_env
 
-  domain  = var.domain
-  traefik = true
+  domain       = var.domain
+  host_address = local.host_address
+  traefik      = true
 }
 
 module "bazarr" {
@@ -116,8 +122,9 @@ module "bazarr" {
   job_file = format("%s/jobs/media/bazarr.nomad.hcl", path.module)
   env      = local.shared_env
 
-  domain  = var.domain
-  traefik = true
+  domain       = var.domain
+  host_address = local.host_address
+  traefik      = true
 }
 
 module "profilarr" {
@@ -130,8 +137,9 @@ module "profilarr" {
   job_file = format("%s/jobs/media/profilarr.nomad.hcl", path.module)
   env      = local.shared_env
 
-  domain  = var.domain
-  traefik = true
+  domain       = var.domain
+  host_address = local.host_address
+  traefik      = true
 }
 
 module "unpackerr" {
@@ -144,5 +152,6 @@ module "unpackerr" {
   job_file = format("%s/jobs/media/unpackerr.nomad.hcl", path.module)
   env      = local.shared_env
 
-  domain = var.domain
+  domain       = var.domain
+  host_address = local.host_address
 }

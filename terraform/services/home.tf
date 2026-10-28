@@ -34,6 +34,7 @@ module "piper" {
   job_file = format("%s/jobs/home/piper.nomad.hcl", path.module)
   env      = local.shared_env
 
-  domain    = var.domain
-  local_dns = true
+  domain       = var.domain
+  host_address = local.host_address
+  local_dns    = true
 }

@@ -12,7 +12,8 @@ module "torrents" {
   job_file = format("%s/jobs/torrents/torrents.nomad.hcl", path.module)
   env      = local.shared_env
 
-  domain     = var.domain
-  route_name = "qbittorrent"
-  traefik    = true
+  domain       = var.domain
+  host_address = local.host_address
+  route_name   = "qbittorrent"
+  traefik      = true
 }

@@ -106,5 +106,5 @@ resource "unifi_dns_record" "local" {
 
   name        = local.local_hostname
   record_type = "A"
-  value       = var.host_ip
+  value       = var.host_address
 }

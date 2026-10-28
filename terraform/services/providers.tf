@@ -1,5 +1,5 @@
 provider "docker" {
-  host = format("ssh://%s@192.168.86.199", var.username)
+  host = format("ssh://%s@%s", var.username, local.host_address)
 }
 
 # Reads NOMAD_ADDR, NOMAD_TOKEN and NOMAD_CACERT from the environment, as in the

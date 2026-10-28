@@ -35,7 +35,8 @@ module "alloy" {
   }
   env = local.shared_env
 
-  domain = var.domain
+  domain       = var.domain
+  host_address = local.host_address
 }
 
 module "blackbox_exporter" {
@@ -51,7 +52,8 @@ module "blackbox_exporter" {
   }
   env = local.shared_env
 
-  domain = var.domain
+  domain       = var.domain
+  host_address = local.host_address
 }
 
 locals {
@@ -84,7 +86,8 @@ module "observability_agent" {
   job_file = format("%s/jobs/observability/observability-agent.nomad.hcl", path.module)
   env      = local.shared_env
 
-  domain = var.domain
+  domain       = var.domain
+  host_address = local.host_address
 }
 
 # --- storage ---
@@ -103,8 +106,9 @@ module "loki" {
   }
   env = local.shared_env
 
-  domain  = var.domain
-  traefik = true
+  domain       = var.domain
+  host_address = local.host_address
+  traefik      = true
 }
 
 module "prometheus" {
@@ -119,13 +123,15 @@ module "prometheus" {
     user      = format("%s:%s", var.uid, var.gid)
     consul_ca = file(pathexpand("~/.homelab/pki/ca.crt"))
     config = templatefile(format("%s/config/prometheus.yml.tftpl", path.module), {
+      host_address    = local.host_address
       public_services = local.public_services
     })
   }
   env = local.shared_env
 
-  domain  = var.domain
-  traefik = true
+  domain       = var.domain
+  host_address = local.host_address
+  traefik      = true
 }
 
 module "tempo" {
@@ -142,8 +148,9 @@ module "tempo" {
   }
   env = local.shared_env
 
-  domain  = var.domain
-  traefik = true
+  domain       = var.domain
+  host_address = local.host_address
+  traefik      = true
 }
 
 # --- grafana ---
@@ -161,8 +168,9 @@ module "grafana" {
   }
   env = local.shared_env
 
-  domain  = var.domain
-  traefik = true
+  domain       = var.domain
+  host_address = local.host_address
+  traefik      = true
 }
 
 module "mcp_grafana" {
@@ -175,8 +183,9 @@ module "mcp_grafana" {
   job_file = format("%s/jobs/observability/mcp-grafana.nomad.hcl", path.module)
   env      = local.shared_env
 
-  domain  = var.domain
-  traefik = true
+  domain       = var.domain
+  host_address = local.host_address
+  traefik      = true
 }
 
 resource "random_password" "mcp_grafana_caller_token" {

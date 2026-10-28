@@ -11,7 +11,8 @@ module "postgres" {
   }
   env = local.shared_env
 
-  domain = var.domain
+  domain       = var.domain
+  host_address = local.host_address
 }
 
 # The dumps the nightly backup saves. The backup script checks they are fresh.
@@ -28,5 +29,6 @@ module "postgres_dump" {
   }
   env = local.shared_env
 
-  domain = var.domain
+  domain       = var.domain
+  host_address = local.host_address
 }

@@ -104,8 +104,7 @@ variable "local_dns" {
   description = "Force a {name}.localdomain record for a service reached directly on a LAN port rather than through Traefik."
 }
 
-variable "host_ip" {
+variable "host_address" {
   type        = string
-  default     = "192.168.86.199"
   description = "Address the {name}.localdomain A record resolves to. Every service is fronted by Traefik on this host."
 }

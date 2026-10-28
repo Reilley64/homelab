@@ -47,6 +47,7 @@ module "tabletop" {
   env = local.shared_env
 
   domain             = var.domain
+  host_address       = local.host_address
   public             = true
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
 

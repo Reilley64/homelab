@@ -1,8 +1,11 @@
 locals {
   ca_cert = file(pathexpand("~/.homelab/pki/ca.crt"))
 
+  # homelab-1's LAN address. Ansible's inventory holds its own copy.
+  host_address = "192.168.86.199"
+
   # Vault and Consul fetch Nomad's workload identity signing keys from here.
-  nomad_jwks_url = "https://192.168.86.199:4646/.well-known/jwks.json"
+  nomad_jwks_url = format("https://%s:4646/.well-known/jwks.json", local.host_address)
 
   nomad_namespaces = {
     ingress       = "Traefik"

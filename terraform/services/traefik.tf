@@ -12,5 +12,6 @@ module "traefik" {
   }
   env = local.shared_env
 
-  domain = var.domain
+  domain       = var.domain
+  host_address = local.host_address
 }

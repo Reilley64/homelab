@@ -7,7 +7,7 @@ scrape_configs:
   # container is the container itself.
   - job_name: nomad-services
     consul_sd_configs:
-      - server: 192.168.86.199:8501
+      - server: ${host_address}:8501
         scheme: https
         authorization:
           credentials_file: /secrets/prometheus_consul_token
@@ -29,7 +29,7 @@ scrape_configs:
   # The host's node_exporter, including the backup script's textfile metrics.
   - job_name: node
     static_configs:
-      - targets: ["192.168.86.199:9100"]
+      - targets: ["${host_address}:9100"]
 
   # The control plane runs on the host, outside Nomad.
   - job_name: consul
@@ -42,7 +42,7 @@ scrape_configs:
     tls_config:
       ca_file: /local/ca.crt
     static_configs:
-      - targets: ["192.168.86.199:8501"]
+      - targets: ["${host_address}:8501"]
 
   - job_name: nomad
     scheme: https
@@ -52,7 +52,7 @@ scrape_configs:
     tls_config:
       ca_file: /local/ca.crt
     static_configs:
-      - targets: ["192.168.86.199:4646"]
+      - targets: ["${host_address}:4646"]
 
   # Vault's listener allows unauthenticated metrics access.
   - job_name: vault
@@ -63,7 +63,7 @@ scrape_configs:
     tls_config:
       ca_file: /local/ca.crt
     static_configs:
-      - targets: ["192.168.86.199:8200"]
+      - targets: ["${host_address}:8200"]
 
   # Each probe goes through the exporter, so its address is rendered from the
   # Consul catalog by the Nomad template.

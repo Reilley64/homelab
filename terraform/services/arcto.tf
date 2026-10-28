@@ -10,7 +10,8 @@ module "arcto_vaultwarden" {
   job_file = format("%s/jobs/arcto/arcto-vaultwarden.nomad.hcl", path.module)
   env      = local.shared_env
 
-  domain = var.domain
+  domain       = var.domain
+  host_address = local.host_address
 
   traefik_tags = [
     "traefik.enable=true",
