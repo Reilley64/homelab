@@ -1,0 +1,32 @@
+---
+backups_env_file: /etc/homelab/backup.env
+backups_staging_dir: /var/backups/homelab
+backups_repositories:
+  - name: nas
+    url: /mnt/appdata/restic
+  - name: s3
+    url: s3:s3.ap-southeast-2.amazonaws.com/reilley-homelab-backups
+backups_paths:
+  - /home/reilley/appdata
+  - /var/backups/homelab
+  - /etc
+backups_excludes:
+  - /home/reilley/appdata/jellyfin/cache
+  - /home/reilley/appdata/jellyfin/data/data/introskipper/introskipper-cache.db
+  - /home/reilley/appdata/prometheus
+  - /home/reilley/appdata/loki
+  - /home/reilley/appdata/tempo
+  - /home/reilley/appdata/postgres
+  - /home/reilley/appdata/jellyfin/data/data/jellyfin.db*
+  - /home/reilley/appdata/bitwarden/db.sqlite3*
+  - /home/reilley/appdata/arcto/vaultwarden/db.sqlite3*
+backups_postgres_container: postgres
+backups_sqlite_databases:
+  - name: jellyfin
+    path: /home/reilley/appdata/jellyfin/data/data/jellyfin.db
+  - name: bitwarden
+    path: /home/reilley/appdata/bitwarden/db.sqlite3
+  - name: arcto-vaultwarden
+    path: /home/reilley/appdata/arcto/vaultwarden/db.sqlite3
+backups_retention: --keep-daily 7 --keep-weekly 4 --keep-monthly 12
+backups_textfile_dir: /var/lib/node_exporter/textfile_collector

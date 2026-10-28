@@ -10,6 +10,16 @@ scrape_configs:
     static_configs:
       - targets: ["node-exporter:9100"]
 
+  # The host's node_exporter, for the backup script's textfile metrics only; the
+  # node job above already covers the rest.
+  - job_name: backups
+    static_configs:
+      - targets: ["192.168.86.199:9100"]
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: homelab_backup_.*
+        action: keep
+
   - job_name: jellyfin-egress
     static_configs:
       - targets: ["observability-agent:9101"]

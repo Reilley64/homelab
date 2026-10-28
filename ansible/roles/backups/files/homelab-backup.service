@@ -1,0 +1,11 @@
+[Unit]
+Description=Back up appdata, databases and /etc with restic
+Requires=mnt-appdata.mount docker.service
+After=mnt-appdata.mount docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/homelab/backup.env
+Environment=RESTIC_CACHE_DIR=/var/cache/restic
+ExecStart=/usr/local/sbin/homelab-backup

@@ -7,3 +7,4 @@
     - docker
     - nas_mounts
     - node_exporter
+    - backups

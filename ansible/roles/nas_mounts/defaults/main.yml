@@ -2,6 +2,9 @@
 nas_mounts_uid: 1000
 nas_mounts_gid: 1000
 nas_mounts_shares:
+  - name: appdata
+    description: Appdata
+    what: //192.168.86.132/Appdata
   - name: media
     description: Media
     what: //192.168.86.132/Media

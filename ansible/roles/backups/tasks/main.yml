@@ -1,0 +1,56 @@
+---
+- name: Install restic
+  community.general.portage:
+    package: app-backup/restic
+
+- name: Check for the hand-placed backup secrets
+  ansible.builtin.stat:
+    path: "{{ backups_env_file }}"
+  register: backups_env
+
+- name: Require the backup secrets file
+  ansible.builtin.assert:
+    that: backups_env.stat.exists
+    fail_msg: >-
+      {{ backups_env_file }} is missing. Create it by hand, mode 0600, with
+      RESTIC_PASSWORD, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
+
+- name: Create the staging directories
+  ansible.builtin.file:
+    path: "{{ backups_staging_dir }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - postgres
+    - sqlite
+
+- name: Install the backup script
+  ansible.builtin.template:
+    src: homelab-backup.sh.j2
+    dest: /usr/local/sbin/homelab-backup
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Install the backup units
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - homelab-backup.service
+    - homelab-backup.timer
+  notify: Reload systemd
+
+- name: Apply changed units
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable the backup timer
+  ansible.builtin.systemd_service:
+    name: homelab-backup.timer
+    enabled: true
+    state: started

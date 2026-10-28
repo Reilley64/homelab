@@ -450,6 +450,78 @@ resource "grafana_rule_group" "host_disk" {
   }
 }
 
+resource "grafana_rule_group" "backups" {
+  name             = "Backups"
+  folder_uid       = grafana_folder.homelab.uid
+  interval_seconds = 300
+
+  rule {
+    name           = "Backup is stale"
+    condition      = "B"
+    for            = "15m"
+    no_data_state  = "Alerting"
+    exec_err_state = "Error"
+
+    annotations = {
+      summary = "The nightly restic backup to {{ $labels.repository }} has not succeeded for 36 hours. Check `journalctl -u homelab-backup` on 192.168.86.199."
+    }
+
+    labels = {
+      severity = "warning"
+    }
+
+    data {
+      ref_id         = "A"
+      datasource_uid = grafana_data_source.prometheus.uid
+
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+
+      model = jsonencode({
+        refId         = "A"
+        expr          = "time() - homelab_backup_last_success_timestamp_seconds"
+        instant       = true
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    data {
+      ref_id         = "B"
+      datasource_uid = "-100"
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+
+      model = jsonencode({
+        refId = "B"
+        type  = "classic_conditions"
+        datasource = {
+          type = "__expr__"
+          uid  = "-100"
+        }
+        conditions = [{
+          evaluator = { type = "gt", params = [129600] }
+          operator  = { type = "and" }
+          query     = { params = ["A"] }
+          reducer   = { type = "last", params = [] }
+          type      = "query"
+        }]
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    notification_settings {
+      contact_point = grafana_contact_point.discord.name
+    }
+  }
+}
+
 resource "grafana_rule_group" "jellyfin_egress_attribution" {
   name             = "Jellyfin egress attribution"
   folder_uid       = grafana_folder.homelab.uid
