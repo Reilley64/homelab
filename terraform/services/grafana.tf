@@ -272,41 +272,6 @@ resource "grafana_rule_group" "alerts" {
   }
 }
 
-moved {
-  from = grafana_dashboard.jellyfin
-  to   = grafana_dashboard.public_services
-}
-
-moved {
-  from = grafana_rule_group.host_disk
-  to   = grafana_rule_group.alerts["host_disk"]
-}
-
-moved {
-  from = grafana_rule_group.backups
-  to   = grafana_rule_group.alerts["backups"]
-}
-
-moved {
-  from = grafana_rule_group.vault
-  to   = grafana_rule_group.alerts["vault"]
-}
-
-moved {
-  from = grafana_rule_group.jellyfin_egress_attribution
-  to   = grafana_rule_group.alerts["jellyfin_egress_attribution"]
-}
-
-moved {
-  from = grafana_rule_group.public_service_availability
-  to   = grafana_rule_group.alerts["public_service_availability"]
-}
-
-moved {
-  from = grafana_rule_group.public_service_tls
-  to   = grafana_rule_group.alerts["public_service_tls"]
-}
-
 resource "grafana_service_account" "mcp_grafana" {
   depends_on = [module.grafana]
 
