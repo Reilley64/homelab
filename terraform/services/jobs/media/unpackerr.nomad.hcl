@@ -46,6 +46,8 @@ job "${name}" {
         UN_LOG_FILE = "/logs/unpackerr.log"
       }
 
+      # |any keeps a failing Radarr or Sonarr health check from removing the URL,
+      # which would re-render this file and restart Unpackerr.
       template {
         destination = "secrets/app.env"
         env         = true
@@ -54,8 +56,8 @@ job "${name}" {
           UN_RADARR_0_API_KEY={{ .Data.data.radarr_api_key }}
           UN_SONARR_0_API_KEY={{ .Data.data.sonarr_api_key }}
           {{ end -}}
-          {{ range service "radarr" }}UN_RADARR_0_URL=http://{{ .Address }}:{{ .Port }}{{ end }}
-          {{ range service "sonarr" }}UN_SONARR_0_URL=http://{{ .Address }}:{{ .Port }}{{ end }}
+          {{ range service "radarr|any" }}UN_RADARR_0_URL=http://{{ .Address }}:{{ .Port }}{{ end }}
+          {{ range service "sonarr|any" }}UN_SONARR_0_URL=http://{{ .Address }}:{{ .Port }}{{ end }}
         EOT
       }
 

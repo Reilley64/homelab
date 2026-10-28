@@ -102,10 +102,14 @@ job "${name}" {
         destination = "/downloads"
       }
 
+      # Imports copy whole releases to the NAS, and that page cache is charged
+      # to this task. Under heavy disk load the kernel can't reclaim it fast
+      # enough, and a 1 GiB limit OOM-killed Radarr in the middle of 2160p
+      # imports.
       resources {
         cpu        = 500
         memory     = 512
-        memory_max = 1024
+        memory_max = 4096
       }
     }
   }
