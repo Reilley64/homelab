@@ -12,7 +12,7 @@ module "jellyfin" {
 
   name      = "jellyfin"
   namespace = "media"
-  image     = "linuxserver/jellyfin:12.3ubu2604-ls56"
+  image     = "linuxserver/jellyfin:latest"
 
   job_file = format("%s/jobs/media/jellyfin.nomad.hcl", path.module)
   job_vars = {
@@ -49,7 +49,7 @@ module "radarr" {
 
   name      = "radarr"
   namespace = "media"
-  image     = "linuxserver/radarr:6.4.4.10685-ls323"
+  image     = "linuxserver/radarr:latest"
 
   job_file = format("%s/jobs/media/radarr.nomad.hcl", path.module)
   job_vars = {
@@ -85,7 +85,7 @@ module "sonarr" {
 
   name      = "sonarr"
   namespace = "media"
-  image     = "linuxserver/sonarr:4.0.20.3014-ls1"
+  image     = "linuxserver/sonarr:latest"
 
   job_file = format("%s/jobs/media/sonarr.nomad.hcl", path.module)
   job_vars = {
@@ -118,7 +118,7 @@ module "seerr" {
 
   name      = "seerr"
   namespace = "media"
-  image     = "seerr/seerr:v3.5.1"
+  image     = "seerr/seerr:latest"
 
   job_file = format("%s/jobs/media/seerr.nomad.hcl", path.module)
   env      = local.shared_env
@@ -149,7 +149,7 @@ module "prowlarr" {
 
   name      = "prowlarr"
   namespace = "media"
-  image     = "linuxserver/prowlarr:2.6.5.5623-ls165"
+  image     = "linuxserver/prowlarr:latest"
 
   job_file = format("%s/jobs/media/prowlarr.nomad.hcl", path.module)
   env      = local.shared_env
@@ -179,7 +179,7 @@ module "flaresolverr" {
 
   name      = "flaresolverr"
   namespace = "media"
-  image     = "flaresolverr/flaresolverr:v3.5.2"
+  image     = "flaresolverr/flaresolverr:latest"
 
   job_file = format("%s/jobs/media/flaresolverr.nomad.hcl", path.module)
   env      = local.shared_env
@@ -209,7 +209,7 @@ module "bazarr" {
 
   name      = "bazarr"
   namespace = "media"
-  image     = "linuxserver/bazarr:v1.6.2-ls369"
+  image     = "linuxserver/bazarr:latest"
 
   job_file = format("%s/jobs/media/bazarr.nomad.hcl", path.module)
   env      = local.shared_env
@@ -239,7 +239,7 @@ module "profilarr" {
 
   name      = "profilarr"
   namespace = "media"
-  image     = "ghcr.io/dictionarry-hub/profilarr:2.3.1"
+  image     = "ghcr.io/dictionarry-hub/profilarr:latest"
 
   job_file = format("%s/jobs/media/profilarr.nomad.hcl", path.module)
   env      = local.shared_env
@@ -269,7 +269,7 @@ module "unpackerr" {
 
   name      = "unpackerr"
   namespace = "media"
-  image     = "golift/unpackerr:0.16.1"
+  image     = "golift/unpackerr:latest"
 
   job_file = format("%s/jobs/media/unpackerr.nomad.hcl", path.module)
   env      = local.shared_env

@@ -18,7 +18,14 @@ variable "namespace" {
 }
 
 variable "image" {
-  type = string
+  type        = string
+  description = "A pulled image is pinned to the tag's current digest in the job. A built image runs by its local tag."
+}
+
+variable "images" {
+  type        = map(string)
+  default     = {}
+  description = "Other pulled images the job uses, keyed by template variable name. Pinned to their digests like image."
 }
 
 variable "build" {

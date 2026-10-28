@@ -3,7 +3,7 @@ module "postgres" {
 
   name      = "postgres"
   namespace = "data"
-  image     = "postgres:14.24"
+  image     = "postgres:14"
 
   job_file = format("%s/jobs/data/postgres.nomad.hcl", path.module)
   job_vars = {
@@ -20,7 +20,7 @@ module "postgres_dump" {
 
   name      = "postgres-dump"
   namespace = "ops"
-  image     = "postgres:14.24"
+  image     = "postgres:14"
 
   job_file = format("%s/jobs/ops/postgres-dump.nomad.hcl", path.module)
   job_vars = {

@@ -3,7 +3,7 @@ module "bitwarden" {
 
   name      = "bitwarden"
   namespace = "bitwarden"
-  image     = "vaultwarden/server:1.37.4"
+  image     = "vaultwarden/server:latest"
 
   job_file = format("%s/jobs/bitwarden/bitwarden.nomad.hcl", path.module)
   job_vars = {

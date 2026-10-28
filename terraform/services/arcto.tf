@@ -5,8 +5,7 @@ module "arcto_vaultwarden" {
 
   name      = "arcto-vaultwarden"
   namespace = "arcto"
-  # The digest of the testing image running today. Nomad never re-pulls a tag.
-  image = "vaultwarden/server:testing@sha256:5df6efa7ae56f1d021c830fa90590d054897ccdcc439e4f135905513cec7f647"
+  image     = "vaultwarden/server:testing"
 
   job_file = format("%s/jobs/arcto/arcto-vaultwarden.nomad.hcl", path.module)
   env      = local.shared_env

@@ -26,7 +26,7 @@ module "alloy" {
 
   name      = "alloy"
   namespace = "observability"
-  image     = "grafana/alloy:v1.21.2"
+  image     = "grafana/alloy:latest"
 
   job_file = format("%s/jobs/observability/alloy.nomad.hcl", path.module)
   job_vars = {
@@ -43,7 +43,7 @@ module "blackbox_exporter" {
 
   name      = "blackbox-exporter"
   namespace = "observability"
-  image     = "prom/blackbox-exporter:v0.29.1"
+  image     = "prom/blackbox-exporter:latest"
 
   job_file = format("%s/jobs/observability/blackbox-exporter.nomad.hcl", path.module)
   job_vars = {
@@ -111,7 +111,7 @@ module "loki" {
 
   name      = "loki"
   namespace = "observability"
-  image     = "grafana/loki:3.7.9"
+  image     = "grafana/loki:latest"
 
   job_file = format("%s/jobs/observability/loki.nomad.hcl", path.module)
   job_vars = {
@@ -129,7 +129,7 @@ module "prometheus" {
 
   name      = "prometheus"
   namespace = "observability"
-  image     = "prom/prometheus:v3.15.1"
+  image     = "prom/prometheus:latest"
 
   job_file = format("%s/jobs/observability/prometheus.nomad.hcl", path.module)
   job_vars = {
@@ -150,7 +150,7 @@ module "tempo" {
 
   name      = "tempo"
   namespace = "observability"
-  image     = "grafana/tempo:3.1.1"
+  image     = "grafana/tempo:latest"
 
   job_file = format("%s/jobs/observability/tempo.nomad.hcl", path.module)
   job_vars = {
@@ -170,7 +170,7 @@ module "grafana" {
 
   name      = "grafana"
   namespace = "observability"
-  image     = "grafana/grafana:13.2.4"
+  image     = "grafana/grafana:latest"
 
   job_file = format("%s/jobs/observability/grafana.nomad.hcl", path.module)
   job_vars = {
@@ -927,7 +927,7 @@ module "mcp_grafana" {
 
   name      = "mcp-grafana"
   namespace = "observability"
-  image     = "grafana/mcp-grafana:2.1.1"
+  image     = "grafana/mcp-grafana:latest"
 
   job_file = format("%s/jobs/observability/mcp-grafana.nomad.hcl", path.module)
   env      = local.shared_env

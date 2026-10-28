@@ -3,7 +3,7 @@ module "traefik" {
 
   name      = "traefik"
   namespace = "ingress"
-  image     = "traefik:v3.7.16"
+  image     = "traefik:latest"
 
   job_file = format("%s/jobs/ingress/traefik.nomad.hcl", path.module)
   job_vars = {

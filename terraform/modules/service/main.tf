@@ -37,14 +37,33 @@ locals {
     ])
   })
 
-  jobspec = templatefile(var.job_file, merge(var.job_vars, {
+  # The digest pins the image Nomad runs to what the tag points at during this
+  # plan, so a new upstream digest changes the job and Nomad redeploys it.
+  pinned_images = {
+    for key, image in var.images :
+    key => format("%s@%s", image, data.docker_registry_image.images[key].sha256_digest)
+  }
+
+  jobspec = templatefile(var.job_file, merge(var.job_vars, local.pinned_images, {
     name         = var.name
     namespace    = var.namespace
     service      = local.route
-    image        = var.build == null ? var.image : docker_image.build[0].name
+    image        = var.build == null ? format("%s@%s", var.image, data.docker_registry_image.image[0].sha256_digest) : docker_image.build[0].name
     traefik_tags = concat(local.traefik_local_tags, local.traefik_public_tags, var.traefik_tags)
     env          = local.env
   }))
+}
+
+data "docker_registry_image" "image" {
+  count = var.build == null ? 1 : 0
+
+  name = var.image
+}
+
+data "docker_registry_image" "images" {
+  for_each = var.images
+
+  name = each.value
 }
 
 resource "docker_image" "build" {
