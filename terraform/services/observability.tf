@@ -55,7 +55,8 @@ module "blackbox_exporter" {
 }
 
 locals {
-  observability_agent_context = abspath(format("%s/../../observability", path.module))
+  # Relative, so a plan from another checkout or worktree does not rebuild the image.
+  observability_agent_context = format("%s/../../observability", path.module)
   observability_agent_source_hash = sha256(join("", [
     for source_path in sort(concat(["Dockerfile", "go.mod"], tolist(fileset(local.observability_agent_context, "**/*.go")))) :
     format("%s:%s", source_path, filesha256(format("%s/%s", local.observability_agent_context, source_path)))
