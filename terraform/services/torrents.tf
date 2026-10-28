@@ -67,11 +67,11 @@ module "qbittorrent" {
     },
     {
       container_path = "/mnt/media"
-      host_path      = module.media.target
+      host_path      = "/mnt/media"
     },
     {
       container_path = "/mnt/roms"
-      host_path      = module.roms.target
+      host_path      = "/mnt/roms"
     },
   ]
 }

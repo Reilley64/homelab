@@ -28,7 +28,7 @@ module "immich" {
   volumes = [
     {
       container_path = "/data"
-      host_path      = module.photos.target
+      host_path      = "/mnt/photos"
     }
   ]
 }

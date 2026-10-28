@@ -1,38 +1,25 @@
-module "media" {
-  source = "../modules/mount"
+# Ansible's nas_mounts role owns the CIFS mount units now. These blocks drop the
+# old null_resource entries from state without touching the host.
+removed {
+  from = module.media
 
-  name        = "mnt-media"
-  description = "Media"
-  remote      = "//192.168.86.132/Media"
-  target      = "/mnt/media"
-  uid         = var.uid
-  gid         = var.gid
-  username    = var.username
-  password    = var.password
+  lifecycle {
+    destroy = false
+  }
 }
 
-module "photos" {
-  source = "../modules/mount"
+removed {
+  from = module.photos
 
-  name        = "mnt-photos"
-  description = "Photos"
-  remote      = "//192.168.86.132/Photos"
-  target      = "/mnt/photos"
-  uid         = var.uid
-  gid         = var.gid
-  username    = var.username
-  password    = var.password
+  lifecycle {
+    destroy = false
+  }
 }
 
-module "roms" {
-  source = "../modules/mount"
+removed {
+  from = module.roms
 
-  name        = "mnt-roms"
-  description = "Roms"
-  remote      = "//192.168.86.132/roms"
-  target      = "/mnt/roms"
-  uid         = var.uid
-  gid         = var.gid
-  username    = var.username
-  password    = var.password
+  lifecycle {
+    destroy = false
+  }
 }

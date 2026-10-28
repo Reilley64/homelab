@@ -37,7 +37,7 @@ module "jellyfin" {
     },
     {
       container_path = "/mnt/media"
-      host_path      = module.media.target
+      host_path      = "/mnt/media"
     },
   ]
 }
@@ -60,7 +60,7 @@ module "radarr" {
     },
     {
       container_path = "/mnt/media"
-      host_path      = module.media.target
+      host_path      = "/mnt/media"
     },
     {
       container_path = "/downloads"
@@ -87,7 +87,7 @@ module "sonarr" {
     },
     {
       container_path = "/mnt/media"
-      host_path      = module.media.target
+      host_path      = "/mnt/media"
     },
     {
       container_path = "/downloads"
@@ -178,7 +178,7 @@ module "bazarr" {
     },
     {
       container_path = "/mnt/media"
-      host_path      = module.media.target
+      host_path      = "/mnt/media"
     },
   ]
 }
