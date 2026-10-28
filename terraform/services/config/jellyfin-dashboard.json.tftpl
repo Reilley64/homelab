@@ -151,7 +151,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(traefik_router_responses_bytes_total{router=\"jellyfin@docker\"}[$__rate_interval])) * 8",
+          "expr": "sum(rate(traefik_router_responses_bytes_total{router=\"jellyfin@consulcatalog\"}[$__rate_interval])) * 8",
           "legendFormat": "public"
         }
       ]
@@ -170,7 +170,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(traefik_router_responses_bytes_total{router=\"jellyfin@docker\"}[$__range]))",
+          "expr": "sum(increase(traefik_router_responses_bytes_total{router=\"jellyfin@consulcatalog\"}[$__range]))",
           "instant": true
         }
       ]
@@ -240,7 +240,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le) (increase(traefik_router_request_duration_seconds_bucket{router=\"jellyfin@docker\"}[$__range])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(traefik_router_request_duration_seconds_bucket{router=\"jellyfin@consulcatalog\"}[$__range])))",
           "instant": true
         }
       ]
@@ -272,7 +272,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le) (increase(traefik_router_request_duration_seconds_bucket{router=\"jellyfin@docker\"}[$__range])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (increase(traefik_router_request_duration_seconds_bucket{router=\"jellyfin@consulcatalog\"}[$__range])))",
           "instant": true
         }
       ]
@@ -294,7 +294,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (router) (rate(traefik_router_requests_total{router=~\"jellyfin(local)?@docker\"}[$__rate_interval]))",
+          "expr": "sum by (router) (rate(traefik_router_requests_total{router=~\"jellyfin(local)?@consulcatalog\"}[$__rate_interval]))",
           "legendFormat": "{{router}}"
         }
       ]

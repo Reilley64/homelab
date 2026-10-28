@@ -2,16 +2,34 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: traefik
-    static_configs:
-      - targets: ["traefik:8080"]
+  # Every Nomad service tagged metrics, labelled with its Consul service name.
+  # Consul's HTTPS API is on the LAN address, because 127.0.0.1 inside this
+  # container is the container itself.
+  - job_name: nomad-services
+    consul_sd_configs:
+      - server: 192.168.86.199:8501
+        scheme: https
+        authorization:
+          credentials_file: /secrets/consul_token
+        tls_config:
+          ca_file: /local/ca.crt
+    relabel_configs:
+      - source_labels: [__meta_consul_tags]
+        regex: .*,metrics,.*
+        action: keep
+      - source_labels: [__meta_consul_service]
+        target_label: service
 
+  # The host's node_exporter. The backups job below keeps the backup script's
+  # textfile metrics, so they are dropped here to avoid two copies.
   - job_name: node
     static_configs:
-      - targets: ["node-exporter:9100"]
+      - targets: ["192.168.86.199:9100"]
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: homelab_backup_.*
+        action: drop
 
-  # The host's node_exporter, for the backup script's textfile metrics only; the
-  # node job above already covers the rest.
   - job_name: backups
     static_configs:
       - targets: ["192.168.86.199:9100"]
@@ -20,25 +38,16 @@ scrape_configs:
         regex: homelab_backup_.*
         action: keep
 
-  - job_name: jellyfin-egress
-    static_configs:
-      - targets: ["observability-agent:9101"]
-
-  - job_name: prometheus
-    static_configs:
-      - targets: ["localhost:9090"]
-
-  # The control plane on the host. Static targets until phase 3 moves
-  # discovery to consul_sd_configs.
+  # The control plane runs on the host, outside Nomad.
   - job_name: consul
     scheme: https
     metrics_path: /v1/agent/metrics
     params:
       format: [prometheus]
     authorization:
-      credentials: "${consul_metrics_token}"
+      credentials_file: /secrets/consul_token
     tls_config:
-      ca_file: /etc/prometheus/ca.crt
+      ca_file: /local/ca.crt
     static_configs:
       - targets: ["192.168.86.199:8501"]
 
@@ -48,7 +57,7 @@ scrape_configs:
     params:
       format: [prometheus]
     tls_config:
-      ca_file: /etc/prometheus/ca.crt
+      ca_file: /local/ca.crt
     static_configs:
       - targets: ["192.168.86.199:4646"]
 
@@ -59,10 +68,12 @@ scrape_configs:
     params:
       format: [prometheus]
     tls_config:
-      ca_file: /etc/prometheus/ca.crt
+      ca_file: /local/ca.crt
     static_configs:
       - targets: ["192.168.86.199:8200"]
 
+  # Each probe goes through the exporter, so its address is rendered from the
+  # Consul catalog by the Nomad template.
   - job_name: blackbox
     scrape_interval: 60s
     scrape_timeout: 15s
@@ -82,8 +93,4 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: blackbox-exporter:9115
-
-  - job_name: blackbox-exporter
-    static_configs:
-      - targets: ["blackbox-exporter:9115"]
+        replacement: '{{ range service "blackbox-exporter" }}{{ .Address }}:{{ .Port }}{{ end }}'

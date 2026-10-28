@@ -1,36 +1,58 @@
-resource "docker_network" "postgres" {
-  name   = "postgres"
-  driver = "bridge"
-}
-
 module "postgres" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "postgres"
-  image    = "postgres:14"
-  networks = [docker_network.postgres.id]
+  name      = "postgres"
+  namespace = "data"
+  image     = "postgres:14.24"
 
-  ports = [
-    {
-      internal_port = 5432
-      external_port = 5432
-    }
-  ]
+  job_file = format("%s/jobs/data/postgres.nomad.hcl", path.module)
+  job_vars = {
+    database_user = var.username
+  }
+  env = local.shared_env
 
-  env = concat(local.shared_env, [
-    format("POSTGRES_USER=%s", var.username),
-    format("POSTGRES_PASSWORD=%s", var.password),
-  ])
+  domain = var.domain
+}
 
-  command = [
-    "postgres",
-  ]
+# The dumps the nightly backup saves. The backup script checks they are fresh.
+module "postgres_dump" {
+  source = "../modules/service"
 
-  volumes = [
-    {
-      container_path = "/var/lib/postgresql/data"
-      host_path      = format("/home/%s/appdata/postgres", var.username)
-    },
-  ]
+  name      = "postgres-dump"
+  namespace = "ops"
+  image     = "postgres:14.24"
+
+  job_file = format("%s/jobs/ops/postgres-dump.nomad.hcl", path.module)
+  job_vars = {
+    database_user = var.username
+  }
+  env = local.shared_env
+
+  domain = var.domain
+}
+
+# The cutover apply forgets the Docker resources without deleting them, so
+# docker start brings them back on rollback.
+removed {
+  from = module.postgres.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.postgres.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = docker_network.postgres
+
+  lifecycle {
+    destroy = false
+  }
 }

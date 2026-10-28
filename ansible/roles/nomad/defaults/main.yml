@@ -42,6 +42,9 @@ nomad_appdata_volumes:
   - tempo
   - traefik/log
   - unpackerr
+# Host volumes outside appdata, by name. The backups role creates these paths.
+nomad_host_volumes:
+  backups-postgres: /var/backups/homelab/postgres
 # Docker's default capabilities, which Nomad also allows by default, plus
 # net_admin for gluetun.
 nomad_docker_allow_caps:

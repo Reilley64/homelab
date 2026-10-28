@@ -65,7 +65,7 @@ func TestTailerFirstStartSkipsExistingLines(t *testing.T) {
 func TestTailerFirstStartRetriesUnterminatedTrailingRecord(t *testing.T) {
 	paths := newTailerPaths(t)
 	completed := tailerLine(t, "203.0.113.8", 10, 0) + "\n"
-	partial := `{"RouterName":"jellyfin@docker","ClientHost":"203.0.113.8",`
+	partial := `{"RouterName":"jellyfin@consulcatalog","ClientHost":"203.0.113.8",`
 	writeTailerLog(t, paths.log, completed+partial)
 	tailer := newTailer(paths, NewMappingCache(time.Hour))
 
@@ -92,7 +92,7 @@ func TestTailerFirstStartRetriesUnterminatedTrailingRecord(t *testing.T) {
 func TestFirstStartOffsetDoesNotReadPastStattedSize(t *testing.T) {
 	paths := newTailerPaths(t)
 	completed := tailerLine(t, "203.0.113.8", 10, 0) + "\n"
-	partial := `{"RouterName":"jellyfin@docker","ClientHost":"203.0.113.8",`
+	partial := `{"RouterName":"jellyfin@consulcatalog","ClientHost":"203.0.113.8",`
 	writeTailerLog(t, paths.log, completed+partial)
 	staleSize := int64(len(completed + partial))
 	appendTailerLog(t, paths.log, `"DownstreamContentSize":7,"time":"1970-01-01T00:00:00Z"}`+"\n")
@@ -135,7 +135,7 @@ func TestTailerCopyTruncateRegrowthBeyondSavedOffsetRestarts(t *testing.T) {
 	if _, err := tailer.ProcessAvailable(time.Unix(1000, 0)); err != nil {
 		t.Fatalf("initial ProcessAvailable() error = %v", err)
 	}
-	regrown := tailerLine(t, "203.0.113.8", 25, 0) + "\n" + strings.Repeat(`{"RouterName":"traefik@docker"}`+"\n", 32)
+	regrown := tailerLine(t, "203.0.113.8", 25, 0) + "\n" + strings.Repeat(`{"RouterName":"traefik@consulcatalog"}`+"\n", 32)
 	writeTailerLog(t, paths.log, regrown)
 
 	if processed, err := tailer.ProcessAvailable(time.Unix(1001, 0)); err != nil || processed != 1 {
@@ -281,7 +281,7 @@ func TestTailerCheckpointsMalformedCompleteLinesAndContinues(t *testing.T) {
 
 func TestTailerRetriesInitiallyUnterminatedRecord(t *testing.T) {
 	paths := newTailerPaths(t)
-	partial := `{"RouterName":"jellyfin@docker","ClientHost":"203.0.113.8",`
+	partial := `{"RouterName":"jellyfin@consulcatalog","ClientHost":"203.0.113.8",`
 	writeTailerLog(t, paths.log, partial)
 	saveTailerCheckpoint(t, paths.log, paths.checkpoint, 0, true)
 	tailer := newTailer(paths, NewMappingCache(time.Hour))
@@ -317,7 +317,7 @@ func newTailer(paths tailerPaths, cache *MappingCache) *Tailer {
 func tailerLine(t *testing.T, clientIP string, bytes int64, unixSeconds int64) string {
 	t.Helper()
 	contents, err := json.Marshal(map[string]any{
-		"RouterName":            "jellyfin@docker",
+		"RouterName":            "jellyfin@consulcatalog",
 		"ClientHost":            clientIP,
 		"DownstreamContentSize": bytes,
 		"time":                  time.Unix(unixSeconds, 0).UTC().Format(time.RFC3339),

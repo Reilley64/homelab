@@ -19,149 +19,89 @@ locals {
   }
 }
 
-resource "docker_network" "observability" {
-  name   = "observability"
-  driver = "bridge"
-}
-
 # --- collectors ---
 
 module "alloy" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "alloy"
-  image    = "grafana/alloy:latest"
-  networks = [docker_network.observability.id]
+  name      = "alloy"
+  namespace = "observability"
+  image     = "grafana/alloy:v1.21.2"
 
-  env  = local.shared_env
-  user = format("%s:%s", var.uid, var.gid)
+  job_file = format("%s/jobs/observability/alloy.nomad.hcl", path.module)
+  job_vars = {
+    user   = format("%s:%s", var.uid, var.gid)
+    config = file(format("%s/config/alloy.alloy", path.module))
+  }
+  env = local.shared_env
 
-  command = [
-    "run",
-    "/etc/alloy/config.alloy",
-    "--storage.path=/alloy",
-  ]
-
-  uploads = [
-    {
-      file    = "/etc/alloy/config.alloy"
-      content = file(format("%s/config/alloy.alloy", path.module))
-    },
-  ]
-
-  volumes = [
-    {
-      container_path = "/alloy"
-      host_path      = format("/home/%s/appdata/alloy", var.username)
-    },
-    {
-      container_path = "/logs"
-      host_path      = format("/home/%s/appdata/jellyfin/log", var.username)
-      read_only      = true
-    },
-  ]
+  domain = var.domain
 }
 
 module "blackbox_exporter" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "blackbox-exporter"
-  image    = "prom/blackbox-exporter:latest"
-  networks = [docker_network.observability.id]
+  name      = "blackbox-exporter"
+  namespace = "observability"
+  image     = "prom/blackbox-exporter:v0.29.1"
 
+  job_file = format("%s/jobs/observability/blackbox-exporter.nomad.hcl", path.module)
+  job_vars = {
+    config = file(format("%s/config/blackbox.yml", path.module))
+  }
   env = local.shared_env
 
-  command = [
-    "--config.file=/etc/blackbox_exporter/config.yml",
-  ]
-
-  uploads = [
-    {
-      file    = "/etc/blackbox_exporter/config.yml"
-      content = file(format("%s/config/blackbox.yml", path.module))
-    },
-  ]
+  domain = var.domain
 }
 
-module "node_exporter" {
-  source = "../modules/service"
-
-  domain   = var.domain
-  name     = "node-exporter"
-  image    = "prom/node-exporter:latest"
-  networks = [docker_network.observability.id]
-
-  env = local.shared_env
-
-  command = [
-    "--path.procfs=/host/proc",
-    "--path.sysfs=/host/sys",
-    "--path.rootfs=/rootfs",
-    "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)",
-  ]
-
-  volumes = [
-    {
-      container_path = "/host/proc"
-      host_path      = "/proc"
-      read_only      = true
-    },
-    {
-      container_path = "/host/sys"
-      host_path      = "/sys"
-      read_only      = true
-    },
-    {
-      container_path = "/rootfs"
-      host_path      = "/"
-      read_only      = true
-    },
-  ]
+locals {
+  observability_agent_context = abspath(format("%s/../../observability", path.module))
+  observability_agent_source_hash = sha256(join("", [
+    for source_path in sort(concat(["Dockerfile", "go.mod"], tolist(fileset(local.observability_agent_context, "**/*.go")))) :
+    format("%s:%s", source_path, filesha256(format("%s/%s", local.observability_agent_context, source_path)))
+  ]))
+  observability_agent_image_tag = substr(local.observability_agent_source_hash, 0, 12)
 }
 
 module "observability_agent" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "observability-agent"
-  image    = "observability-agent"
-  networks = [docker_network.media.id, docker_network.observability.id]
+  name      = "observability-agent"
+  namespace = "observability"
+  image     = format("observability-agent:%s", local.observability_agent_image_tag)
 
+  # No revision label: it would rebuild the image on every commit to this
+  # repository, not only when the agent's source changes.
   build = {
-    context = abspath(format("%s/../../observability", path.module))
-    triggers = {
-      source = sha256(join("", [
-        for source_path in sort(concat(["Dockerfile", "go.mod"], tolist(fileset(format("%s/../../observability", path.module), "**/*.go")))) :
-        format("%s:%s", source_path, filesha256(format("%s/../../observability/%s", path.module, source_path)))
-      ]))
+    context = local.observability_agent_context
+    labels = {
+      "org.opencontainers.image.source"  = "https://github.com/Reilley64/homelab"
+      "org.opencontainers.image.version" = local.observability_agent_image_tag
     }
   }
 
-  env = concat(local.shared_env, [
-    "JELLYFIN_URL=http://jellyfin:8096",
-    format("JELLYFIN_API_KEY=%s", var.jellyfin_api_key),
-    "ACCESS_LOG_PATH=/logs/access.json",
-    "CHECKPOINT_PATH=/state/checkpoint.json",
-    "MAPPING_TTL_SECONDS=600",
-    "SESSION_POLL_SECONDS=15",
-    "METRICS_PORT=9101",
-    "LOG_MAX_BYTES=104857600",
-    "LOG_COPIES=7",
-    "ROTATION_CHECK_SECONDS=60",
-  ])
+  job_file = format("%s/jobs/observability/observability-agent.nomad.hcl", path.module)
+  env      = local.shared_env
 
-  volumes = [
-    {
-      container_path = "/logs"
-      host_path      = format("/home/%s/appdata/traefik/log", var.username)
-    },
-    {
-      container_path = "/state"
-      host_path      = format("/home/%s/appdata/jellyfin-egress-exporter", var.username)
-    },
-  ]
+  domain = var.domain
+}
+
+# Node metrics come from the node_exporter host service that Ansible installs,
+# which sees the host's real network interfaces.
+removed {
+  from = module.node_exporter.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.node_exporter.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 # --- storage ---
@@ -169,102 +109,58 @@ module "observability_agent" {
 module "loki" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "loki"
-  image    = "grafana/loki:latest"
-  port     = 3100
-  networks = [docker_network.observability.id, docker_network.traefik.id]
+  name      = "loki"
+  namespace = "observability"
+  image     = "grafana/loki:3.7.9"
 
-  env  = local.shared_env
-  user = format("%s:%s", var.uid, var.gid)
+  job_file = format("%s/jobs/observability/loki.nomad.hcl", path.module)
+  job_vars = {
+    user   = format("%s:%s", var.uid, var.gid)
+    config = file(format("%s/config/loki.yml", path.module))
+  }
+  env = local.shared_env
 
-  command = [
-    "-config.file=/etc/loki/loki.yml",
-  ]
-
-  uploads = [
-    {
-      file    = "/etc/loki/loki.yml"
-      content = file(format("%s/config/loki.yml", path.module))
-    },
-  ]
-
-  volumes = [
-    {
-      container_path = "/loki"
-      host_path      = format("/home/%s/appdata/loki", var.username)
-    },
-  ]
+  domain  = var.domain
+  traefik = true
 }
 
 module "prometheus" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "prometheus"
-  image    = "prom/prometheus:latest"
-  port     = 9090
-  networks = [docker_network.observability.id, docker_network.traefik.id]
+  name      = "prometheus"
+  namespace = "observability"
+  image     = "prom/prometheus:v3.15.1"
 
-  env  = local.shared_env
-  user = format("%s:%s", var.uid, var.gid)
+  job_file = format("%s/jobs/observability/prometheus.nomad.hcl", path.module)
+  job_vars = {
+    user      = format("%s:%s", var.uid, var.gid)
+    consul_ca = file(pathexpand("~/.homelab/pki/ca.crt"))
+    config = templatefile(format("%s/config/prometheus.yml.tftpl", path.module), {
+      public_services = local.public_services
+    })
+  }
+  env = local.shared_env
 
-  command = [
-    "--config.file=/etc/prometheus/prometheus.yml",
-    "--storage.tsdb.retention.time=30d",
-    "--web.enable-otlp-receiver",
-  ]
-
-  uploads = [
-    {
-      file = "/etc/prometheus/prometheus.yml"
-      content = templatefile(format("%s/config/prometheus.yml.tftpl", path.module), {
-        public_services      = local.public_services
-        consul_metrics_token = var.consul_metrics_token
-      })
-    },
-    {
-      file    = "/etc/prometheus/ca.crt"
-      content = file(pathexpand("~/.homelab/pki/ca.crt"))
-    },
-  ]
-
-  volumes = [
-    {
-      container_path = "/prometheus"
-      host_path      = format("/home/%s/appdata/prometheus", var.username)
-    },
-  ]
+  domain  = var.domain
+  traefik = true
 }
 
 module "tempo" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "tempo"
-  image    = "grafana/tempo:latest"
-  networks = [docker_network.observability.id]
+  name      = "tempo"
+  namespace = "observability"
+  image     = "grafana/tempo:3.1.1"
 
-  env  = local.shared_env
-  user = format("%s:%s", var.uid, var.gid)
+  job_file = format("%s/jobs/observability/tempo.nomad.hcl", path.module)
+  job_vars = {
+    user   = format("%s:%s", var.uid, var.gid)
+    config = file(format("%s/config/tempo.yml", path.module))
+  }
+  env = local.shared_env
 
-  command = [
-    "-config.file=/etc/tempo/tempo.yml",
-  ]
-
-  uploads = [
-    {
-      file    = "/etc/tempo/tempo.yml"
-      content = file(format("%s/config/tempo.yml", path.module))
-    },
-  ]
-
-  volumes = [
-    {
-      container_path = "/var/tempo"
-      host_path      = format("/home/%s/appdata/tempo", var.username)
-    },
-  ]
+  domain  = var.domain
+  traefik = true
 }
 
 # --- grafana ---
@@ -272,33 +168,162 @@ module "tempo" {
 module "grafana" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "grafana"
-  image    = "grafana/grafana:latest"
-  port     = 3000
-  networks = [docker_network.observability.id, docker_network.traefik.id]
+  name      = "grafana"
+  namespace = "observability"
+  image     = "grafana/grafana:13.2.4"
 
-  env = concat(local.shared_env, [
-    format("GF_SECURITY_ADMIN_PASSWORD=%s", var.password),
-    "GF_SERVER_ROOT_URL=http://grafana.localdomain",
-    "GF_PLUGINS_PREINSTALL=marcusolsson-dynamictext-panel@6.3.0",
-  ])
+  job_file = format("%s/jobs/observability/grafana.nomad.hcl", path.module)
+  job_vars = {
+    user = format("%s:%s", var.uid, var.gid)
+  }
+  env = local.shared_env
 
-  user = format("%s:%s", var.uid, var.gid)
-
-  volumes = [
-    {
-      container_path = "/var/lib/grafana"
-      host_path      = format("/home/%s/appdata/grafana", var.username)
-    },
-  ]
+  domain  = var.domain
+  traefik = true
 }
 
+# The cutover apply forgets the Docker resources without deleting them, so
+# docker start brings them back on rollback.
+removed {
+  from = module.alloy.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.alloy.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.blackbox_exporter.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.blackbox_exporter.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.observability_agent.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+moved {
+  from = module.observability_agent.docker_image.image
+  to   = module.observability_agent.docker_image.build[0]
+}
+
+removed {
+  from = module.loki.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.loki.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.prometheus.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.prometheus.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.tempo.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.tempo.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.grafana.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.grafana.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.mcp_grafana.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.mcp_grafana.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = docker_network.observability
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+# The job is healthy when the module returns, but Traefik needs a moment to
+# pick the route up from Consul before the Grafana provider can reach it.
 resource "time_sleep" "grafana_ready" {
   create_duration = "30s"
 
   triggers = {
-    container_id = module.grafana.id
+    jobspec = sha256(module.grafana.jobspec)
   }
 }
 
@@ -308,7 +333,7 @@ resource "grafana_data_source" "loki" {
   type = "loki"
   name = "Loki"
   uid  = "loki"
-  url  = "http://loki:3100"
+  url  = "http://loki.localdomain"
 
   # Loki keeps an OTLP record's trace id as structured metadata, so match the
   # field by name rather than a regex over the line. A literal uid, because
@@ -331,7 +356,7 @@ resource "grafana_data_source" "prometheus" {
   type       = "prometheus"
   name       = "Prometheus"
   uid        = "prometheus"
-  url        = "http://prometheus:9090"
+  url        = "http://prometheus.localdomain"
   is_default = true
 }
 
@@ -341,7 +366,7 @@ resource "grafana_data_source" "tempo" {
   type = "tempo"
   name = "Tempo"
   uid  = "tempo"
-  url  = "http://tempo:3200"
+  url  = "http://tempo.localdomain"
 
   json_data_encoded = jsonencode({
     tracesToLogsV2 = {
@@ -614,7 +639,7 @@ resource "grafana_rule_group" "jellyfin_egress_attribution" {
     exec_err_state = "Error"
 
     annotations = {
-      summary = "observability-agent cannot read Jellyfin /Sessions, so egress is not attributed to users. Check `docker logs observability-agent`."
+      summary = "observability-agent cannot read Jellyfin /Sessions, so egress is not attributed to users. Check `nomad alloc logs -namespace observability -job observability-agent`."
     }
 
     labels = {
@@ -680,7 +705,7 @@ resource "grafana_rule_group" "jellyfin_egress_attribution" {
     exec_err_state = "Error"
 
     annotations = {
-      summary = format("Most public Jellyfin egress in the last hour has user=\"unknown\". Check that Jellyfin KnownProxies is %s and that Sessions show real client IPs.", local.traefik_ip)
+      summary = format("Most public Jellyfin egress in the last hour has user=\"unknown\". Check that Jellyfin KnownProxies is %s and that Sessions show real client IPs.", local.jellyfin_known_proxy)
     }
 
     labels = {
@@ -900,23 +925,15 @@ resource "grafana_rule_group" "public_service_tls" {
 module "mcp_grafana" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "mcp-grafana"
-  image    = "grafana/mcp-grafana:latest"
-  port     = 8000
-  networks = [docker_network.observability.id, docker_network.traefik.id]
+  name      = "mcp-grafana"
+  namespace = "observability"
+  image     = "grafana/mcp-grafana:2.1.1"
 
-  env = concat(local.shared_env, [
-    "GRAFANA_URL=http://grafana:3000",
-    format("GRAFANA_SERVICE_ACCOUNT_TOKEN=%s", grafana_service_account_token.mcp_grafana.key),
-    format("MCP_GRAFANA_SERVER_TOKEN=%s", random_password.mcp_grafana_caller_token.result),
-  ])
+  job_file = format("%s/jobs/observability/mcp-grafana.nomad.hcl", path.module)
+  env      = local.shared_env
 
-  command = [
-    "--transport=streamable-http",
-    "--allowed-hosts=mcp-grafana.localdomain",
-    "--disable-write",
-  ]
+  domain  = var.domain
+  traefik = true
 }
 
 resource "grafana_service_account" "mcp_grafana" {
@@ -938,5 +955,11 @@ resource "random_password" "mcp_grafana_caller_token" {
 
 output "mcp_grafana_caller_token" {
   value     = random_password.mcp_grafana_caller_token.result
+  sensitive = true
+}
+
+# Read once to write kv/observability/mcp-grafana in Vault.
+output "mcp_grafana_service_account_token" {
+  value     = grafana_service_account_token.mcp_grafana.key
   sensitive = true
 }

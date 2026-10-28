@@ -1,26 +1,35 @@
 module "bitwarden" {
   source = "../modules/service"
 
+  name      = "bitwarden"
+  namespace = "bitwarden"
+  image     = "vaultwarden/server:1.37.4"
+
+  job_file = format("%s/jobs/bitwarden/bitwarden.nomad.hcl", path.module)
+  job_vars = {
+    public_url = format("https://bitwarden.%s", var.domain)
+  }
+  env = local.shared_env
+
   domain             = var.domain
-  name               = "bitwarden"
-  image              = "vaultwarden/server:latest"
-  port               = 80
   public             = true
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
-  networks           = [docker_network.traefik.id]
+}
 
-  env = concat(local.shared_env, [
-    format("DOMAIN=https://bitwarden.%s", var.domain)
-  ])
+# The cutover apply forgets the Docker resources without deleting them, so
+# docker start brings them back on rollback.
+removed {
+  from = module.bitwarden.docker_container.container
 
-  command = [
-    "/start.sh"
-  ]
+  lifecycle {
+    destroy = false
+  }
+}
 
-  volumes = [
-    {
-      container_path = "/data"
-      host_path      = format("/home/%s/appdata/bitwarden", var.username)
-    },
-  ]
+removed {
+  from = module.bitwarden.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
 }

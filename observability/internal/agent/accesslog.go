@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const publicJellyfinRouter = "jellyfin@docker"
+const publicJellyfinRouter = "jellyfin@consulcatalog"
 
 var rfc3339Timestamp = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$`)
 

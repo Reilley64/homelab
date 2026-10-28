@@ -6,11 +6,21 @@ metrics={{ backups_textfile_dir }}/homelab_backup.prom
 
 # Databases are dumped first; their live files are excluded below because a
 # file-by-file copy of a database that is being written is not consistent.
+{% if backups_postgres_dump_job %}
+# The Nomad job ops/postgres-dump writes the Postgres dumps at 03:00. A backup
+# without a recent dump has no usable copy of Postgres, so it does not run.
+if [ -z "$(find "$staging/postgres" -maxdepth 1 -type f -mmin -1440)" ]; then
+  echo "No Postgres dump in $staging/postgres is newer than a day" >&2
+  exit 1
+fi
+rm -f "$staging"/sqlite/*
+{% else %}
 rm -f "$staging"/postgres/* "$staging"/sqlite/*
 docker exec {{ backups_postgres_container }} sh -c 'pg_dumpall -U "$POSTGRES_USER" --globals-only' >"$staging/postgres/globals.sql"
 for db in $(docker exec {{ backups_postgres_container }} sh -c 'psql -U "$POSTGRES_USER" -d postgres -Atc "select datname from pg_database where not datistemplate and datname <> '"'"'postgres'"'"'"'); do
   docker exec {{ backups_postgres_container }} sh -c "pg_dump -U \"\$POSTGRES_USER\" -Fc \"$db\"" >"$staging/postgres/$db.dump"
 done
+{% endif %}
 {% for db in backups_sqlite_databases %}
 sqlite3 -cmd '.timeout 30000' '{{ db.path }}' ".backup '$staging/sqlite/{{ db.name }}.db'"
 {% endfor %}

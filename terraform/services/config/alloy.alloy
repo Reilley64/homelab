@@ -90,21 +90,17 @@ loki.source.file "jellyfin_ffmpeg" {
   forward_to = [loki.write.default.receiver]
 }
 
+// The Nomad job renders the *_ADDRESS variables from the Consul catalog.
 loki.write "default" {
   endpoint {
-    url = "http://loki:3100/loki/api/v1/push"
+    url = string.format("http://%s/loki/api/v1/push", sys.env("LOKI_ADDRESS"))
   }
 }
 
-// tabletop pushes OTLP here. No published ports: only containers on the
-// observability network can reach the receiver.
+// tabletop pushes OTLP gRPC here, through the alloy-otlp Consul service.
 otelcol.receiver.otlp "default" {
   grpc {
     endpoint = "0.0.0.0:4317"
-  }
-
-  http {
-    endpoint = "0.0.0.0:4318"
   }
 
   output {
@@ -126,19 +122,19 @@ otelcol.processor.batch "default" {
 // trace ids on log records arrive without any relabelling here.
 otelcol.exporter.otlphttp "prometheus" {
   client {
-    endpoint = "http://prometheus:9090/api/v1/otlp"
+    endpoint = string.format("http://%s/api/v1/otlp", sys.env("PROMETHEUS_ADDRESS"))
   }
 }
 
 otelcol.exporter.otlphttp "loki" {
   client {
-    endpoint = "http://loki:3100/otlp"
+    endpoint = string.format("http://%s/otlp", sys.env("LOKI_ADDRESS"))
   }
 }
 
 otelcol.exporter.otlp "tempo" {
   client {
-    endpoint = "tempo:4317"
+    endpoint = sys.env("TEMPO_OTLP_ADDRESS")
 
     tls {
       insecure = true

@@ -1,71 +1,49 @@
-resource "docker_network" "arcto" {
-  name   = "arcto"
-  driver = "bridge"
-}
+# Its DNS lives outside this repository, so the module makes no records and
+# the route keeps its own host rule.
+module "arcto_vaultwarden" {
+  source = "../modules/service"
 
-resource "docker_image" "arcto_vaultwarden" {
-  name         = "vaultwarden/server:testing"
-  keep_locally = false
-}
+  name      = "arcto-vaultwarden"
+  namespace = "arcto"
+  # The digest of the testing image running today. Nomad never re-pulls a tag.
+  image = "vaultwarden/server:testing@sha256:5df6efa7ae56f1d021c830fa90590d054897ccdcc439e4f135905513cec7f647"
 
-resource "docker_container" "vaultwarden" {
-  image   = docker_image.arcto_vaultwarden.image_id
-  name    = "arcto-vaultwarden"
-  restart = "unless-stopped"
+  job_file = format("%s/jobs/arcto/arcto-vaultwarden.nomad.hcl", path.module)
+  env      = local.shared_env
 
-  env = concat(local.shared_env, [
-    format("ADMIN_TOKEN=%s", var.arcto_vaultwarden_admin_token),
-  ])
+  domain = var.domain
 
-  command = [
-    "/start.sh"
+  traefik_tags = [
+    "traefik.enable=true",
+    "traefik.http.routers.arcto-vaultwarden.rule=Host(`vaultwarden.arctopayments.com.au`)",
+    "traefik.http.routers.arcto-vaultwarden.entrypoints=websecure",
+    "traefik.http.routers.arcto-vaultwarden.tls.certresolver=myresolver",
+    "traefik.http.routers.arcto-vaultwarden.service=arcto-vaultwarden",
   ]
+}
 
-  networks_advanced {
-    name = docker_network.arcto.name
+# The cutover apply forgets the Docker resources without deleting them, so
+# docker start brings them back on rollback.
+removed {
+  from = docker_container.vaultwarden
+
+  lifecycle {
+    destroy = false
   }
+}
 
-  networks_advanced {
-    name = docker_network.traefik.name
+removed {
+  from = docker_image.arcto_vaultwarden
+
+  lifecycle {
+    destroy = false
   }
+}
 
-  labels {
-    label = "traefik.docker.network"
-    value = "traefik"
-  }
+removed {
+  from = docker_network.arcto
 
-  labels {
-    label = "traefik.http.services.arcto-vaultwarden.loadbalancer.server.port"
-    value = "80"
-  }
-
-  labels {
-    label = "traefik.http.routers.arcto-vaultwarden.rule"
-    value = "Host(`vaultwarden.arctopayments.com.au`)"
-  }
-
-  labels {
-    label = "traefik.http.routers.arcto-vaultwarden.entrypoints"
-    value = "websecure"
-  }
-
-  labels {
-    label = "traefik.http.routers.arcto-vaultwarden.tls.certresolver"
-    value = "myresolver"
-  }
-
-  labels {
-    label = "traefik.http.routers.arcto-vaultwarden.service"
-    value = "arcto-vaultwarden"
-  }
-
-  volumes {
-    container_path = "/data"
-    host_path      = format("/home/%s/appdata/arcto/vaultwarden", var.username)
-  }
-
-  ports {
-    internal = 80
-    external = 8000
+  lifecycle {
+    destroy = false
   }
 }

@@ -1,71 +1,81 @@
-resource "docker_network" "home" {
-  name   = "home"
-  driver = "bridge"
+# Home Assistant runs on its own device, the Home Assistant Green. Consul lists
+# it as an external node so Traefik can route to it. External nodes have no
+# agent to run health checks, so the service has none.
+resource "consul_node" "homeassistant_green" {
+  name    = "homeassistant-green"
+  address = "192.168.86.139"
+
+  meta = {
+    "external-node" = "true"
+  }
 }
 
-resource "docker_container" "homeassistant" {
-  name    = "homeassistant"
-  image   = docker_image.alpine.image_id
-  restart = "unless-stopped"
+resource "consul_service" "homeassistant" {
+  name = "homeassistant"
+  node = consul_node.homeassistant_green.name
+  port = 8123
 
-  command = [
-    "tail",
-    "-f",
-    "/dev/null",
+  tags = [
+    "traefik.enable=true",
+    format("traefik.http.routers.homeassistant.rule=Host(`homeassistant.%s`)", var.domain),
+    "traefik.http.routers.homeassistant.entrypoints=websecure",
+    "traefik.http.routers.homeassistant.tls.certresolver=myresolver",
+    "traefik.http.routers.homeassistant.service=homeassistant",
   ]
-
-  labels {
-    label = "traefik.http.routers.homeassistant.rule"
-    value = format("Host(`homeassistant.%s`)", var.domain)
-  }
-
-  labels {
-    label = "traefik.http.routers.homeassistant.entrypoints"
-    value = "websecure"
-  }
-
-  labels {
-    label = "traefik.http.routers.homeassistant.tls.certresolver"
-    value = "myresolver"
-  }
-
-  labels {
-    label = "traefik.http.routers.homeassistant.service"
-    value = "homeassistant"
-  }
-
-  labels {
-    label = "traefik.http.services.homeassistant.loadbalancer.server.url"
-    value = "http://192.168.86.139:8123"
-  }
 }
 
 module "piper" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "piper"
-  image    = "rhasspy/wyoming-piper:2.1.2"
-  port     = 10200
-  networks = [docker_network.home.id]
+  name      = "piper"
+  namespace = "home"
+  image     = "rhasspy/wyoming-piper:2.1.2"
 
-  ports = [
-    {
-      internal_port = 10200
-      external_port = 10200
-    },
-  ]
+  job_file = format("%s/jobs/home/piper.nomad.hcl", path.module)
+  env      = local.shared_env
 
-  env = local.shared_env
+  domain    = var.domain
+  local_dns = true
+}
 
-  command = [
-    "--voice=en_US-lessac-medium",
-  ]
+# The cutover apply forgets the Docker resources without deleting them, so
+# docker start brings them back on rollback.
+removed {
+  from = docker_container.homeassistant
 
-  volumes = [
-    {
-      container_path = "/data"
-      host_path      = "/home/${var.username}/appdata/piper"
-    },
-  ]
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = docker_image.alpine
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.piper.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.piper.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = docker_network.home
+
+  lifecycle {
+    destroy = false
+  }
 }

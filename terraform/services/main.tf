@@ -6,59 +6,71 @@ locals {
   }
 }
 
-resource "docker_image" "alpine" {
-  name         = "alpine:latest"
-  keep_locally = false
-}
-
-module "diun" {
-  source = "../modules/service"
-
-  domain = var.domain
-  name   = "diun"
-  image  = "crazymax/diun:4.30.0"
-
-  env = concat(local.shared_env, [
-    "DIUN_WATCH_WORKERS=20",
-    "DIUN_WATCH_SCHEDULE=0 */6 * * *",
-    "DIUN_WATCH_JITTER=30s",
-    "DIUN_PROVIDERS_DOCKER=true",
-    format("DIUN_NOTIF_DISCORD_WEBHOOKURL=%s", var.discord_webhook),
-  ])
-
-  command = [
-    "serve",
-  ]
-
-  volumes = [
-    {
-      container_path = "/var/run/docker.sock"
-      host_path      = "/var/run/docker.sock"
-    },
-    {
-      container_path = "/data"
-      host_path      = format("/home/%s/appdata/diun", var.username)
-    },
-  ]
-}
-
 data "cloudflare_zone" "reilley_dev" {
   filter = {
     name = var.domain
   }
 }
 
-module "ddns" {
+module "diun" {
   source = "../modules/service"
 
-  domain = var.domain
-  name   = "cloudflare-ddns"
-  image  = "favonia/cloudflare-ddns:1.17.0"
+  name      = "diun"
+  namespace = "ops"
+  image     = "crazymax/diun:4.33.1"
 
-  env = concat(local.shared_env, [
-    format("CLOUDFLARE_API_TOKEN=%s", var.cloudflare_api_token),
-    format("DOMAINS=app.%s", var.domain),
-    "IP6_PROVIDER=none",
-    "RECORD_COMMENT=managed by cloudflare-ddns",
-  ])
+  job_file = format("%s/jobs/ops/diun.nomad.hcl", path.module)
+  env      = local.shared_env
+
+  domain = var.domain
+}
+
+module "cloudflare_ddns" {
+  source = "../modules/service"
+
+  name      = "cloudflare-ddns"
+  namespace = "ops"
+  image     = "favonia/cloudflare-ddns:1.17.0"
+
+  job_file = format("%s/jobs/ops/cloudflare-ddns.nomad.hcl", path.module)
+  job_vars = {
+    domains = format("app.%s", var.domain)
+  }
+  env = local.shared_env
+
+  domain = var.domain
+}
+
+# The cutover apply forgets the Docker resources without deleting them, so
+# docker start brings them back on rollback.
+removed {
+  from = module.diun.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.diun.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.ddns.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.ddns.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
 }

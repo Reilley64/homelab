@@ -1,77 +1,66 @@
-resource "docker_network" "torrents" {
-  name   = "torrents"
-  driver = "bridge"
-}
-
-module "gluetun" {
+module "torrents" {
   source = "../modules/service"
+
+  name      = "torrents"
+  namespace = "torrents"
+  image     = "linuxserver/qbittorrent:5.2.3-libtorrentv1"
+
+  job_file = format("%s/jobs/torrents/torrents.nomad.hcl", path.module)
+  job_vars = {
+    # The digest of the latest image running today. Nomad never re-pulls a tag.
+    gluetun_image = "qmcgaw/gluetun:latest@sha256:c2ee4191762fca6b6a3c3359a731198a95d9c9af4db32d466e223bf3a84e779b"
+    wait_image    = "busybox:1.37"
+  }
+  env = local.shared_env
 
   domain     = var.domain
-  name       = "gluetun"
-  image      = "qmcgaw/gluetun:latest"
   route_name = "qbittorrent"
-  url        = "http://192.168.86.199:8080"
-  networks   = [docker_network.torrents.id]
-
-  ports = [
-    {
-      internal_port = 8080
-      external_port = 8080
-    },
-  ]
-
-  env = concat(local.shared_env, [
-    "VPN_SERVICE_PROVIDER=protonvpn",
-    "VPN_TYPE=wireguard",
-    format("WIREGUARD_PRIVATE_KEY=%s", var.wireguard_private_key),
-    "PORT_FORWARD_ONLY=on",
-    "VPN_PORT_FORWARDING=on",
-    "VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'wget -O- --retry-connrefused --post-data \"json={\\\"listen_port\\\":{{PORT}},\\\"current_network_interface\\\":\\\"{{VPN_INTERFACE}}\\\",\\\"random_port\\\":false,\\\"upnp\\\":false}\" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'",
-    "VPN_PORT_FORWARDING_DOWN_COMMAND=/bin/sh -c 'wget -O- --retry-connrefused --post-data \"json={\\\"listen_port\\\":0,\\\"current_network_interface\\\":\\\"lo\\\"}\" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'",
-  ])
-
-  privileged   = true
-  capabilities = ["CAP_NET_ADMIN"]
-
-  devices = [
-    {
-      container_path = "/dev/net/tun"
-      host_path      = "/dev/net/tun"
-    },
-  ]
+  traefik    = true
 }
 
-module "qbittorrent" {
-  source = "../modules/service"
+moved {
+  from = module.gluetun.unifi_dns_record.local
+  to   = module.torrents.unifi_dns_record.local
+}
 
-  domain      = var.domain
-  name        = "qbittorrent"
-  image       = "linuxserver/qbittorrent:5.2.3-libtorrentv1"
-  forward     = format("container:%s", module.gluetun.id)
-  cpus        = "4.0"
-  memory      = "8192"
-  memory_swap = 8192
+# The cutover apply forgets the Docker resources without deleting them, so
+# docker start brings them back on rollback.
+removed {
+  from = module.gluetun.docker_container.container
 
-  env = concat(local.shared_env, [
-    "WEBUI_PORT=8080",
-  ])
+  lifecycle {
+    destroy = false
+  }
+}
 
-  volumes = [
-    {
-      container_path = "/config"
-      host_path      = format("/home/%s/appdata/qbittorrent", var.username)
-    },
-    {
-      container_path = "/downloads"
-      host_path      = format("/home/%s/downloads", var.username)
-    },
-    {
-      container_path = "/mnt/media"
-      host_path      = "/mnt/media"
-    },
-    {
-      container_path = "/mnt/roms"
-      host_path      = "/mnt/roms"
-    },
-  ]
+removed {
+  from = module.gluetun.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.qbittorrent.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.qbittorrent.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = docker_network.torrents
+
+  lifecycle {
+    destroy = false
+  }
 }

@@ -51,6 +51,12 @@ client {
     path = "{{ nomad_appdata_dir }}/{{ volume }}"
   }
 {% endfor %}
+{% for name, path in nomad_host_volumes.items() %}
+
+  host_volume "{{ name }}" {
+    path = "{{ path }}"
+  }
+{% endfor %}
 }
 
 acl {

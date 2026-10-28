@@ -1,233 +1,302 @@
-resource "docker_network" "media" {
-  name   = "media"
-  driver = "bridge"
+locals {
+  # REHEARSAL CHECK: the address Jellyfin sees Traefik connect from. It goes
+  # into KnownProxies in appdata/jellyfin/network.xml by hand at the cutover.
+  # Traefik reaches Jellyfin on the internal host network, so this should be
+  # 10.91.0.1. If Jellyfin's logs show the bridge gateway 10.90.0.1 instead,
+  # change it here and in network.xml.
+  jellyfin_known_proxy = "10.91.0.1"
 }
 
 module "jellyfin" {
   source = "../modules/service"
 
-  domain             = var.domain
-  name               = "jellyfin"
-  image              = "linuxserver/jellyfin:latest"
-  port               = 8096
-  public             = true
-  cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
-  networks           = [docker_network.media.id, docker_network.traefik.id]
+  name      = "jellyfin"
+  namespace = "media"
+  image     = "linuxserver/jellyfin:12.3ubu2604-ls56"
 
+  job_file = format("%s/jobs/media/jellyfin.nomad.hcl", path.module)
+  job_vars = {
+    logging_json = file(format("%s/config/jellyfin-logging.json", path.module))
+  }
   env = local.shared_env
 
-  uploads = [
-    {
-      file    = "/config/logging.json"
-      content = file(format("%s/config/jellyfin-logging.json", path.module))
-    },
-  ]
+  domain             = var.domain
+  public             = true
+  cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
+}
 
-  devices = [
-    {
-      container_path = "/dev/dri"
-      host_path      = "/dev/dri"
-    },
-  ]
+removed {
+  from = module.jellyfin.docker_container.container
 
-  volumes = [
-    {
-      container_path = "/config"
-      host_path      = format("/home/%s/appdata/jellyfin", var.username)
-    },
-    {
-      container_path = "/mnt/media"
-      host_path      = "/mnt/media"
-    },
-  ]
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.jellyfin.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 module "radarr" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "radarr"
-  image    = "linuxserver/radarr:latest"
-  port     = 7878
-  networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
+  # Postgres must be registered in Consul before the database settings render.
+  depends_on = [module.postgres]
 
+  name      = "radarr"
+  namespace = "media"
+  image     = "linuxserver/radarr:6.4.4.10685-ls323"
+
+  job_file = format("%s/jobs/media/radarr.nomad.hcl", path.module)
+  job_vars = {
+    database_user = var.username
+  }
   env = local.shared_env
 
-  volumes = [
-    {
-      container_path = "/config"
-      host_path      = format("/home/%s/appdata/radarr", var.username)
-    },
-    {
-      container_path = "/mnt/media"
-      host_path      = "/mnt/media"
-    },
-    {
-      container_path = "/downloads"
-      host_path      = format("/home/%s/downloads", var.username)
-    },
-  ]
+  domain  = var.domain
+  traefik = true
+}
+
+removed {
+  from = module.radarr.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.radarr.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 module "sonarr" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "sonarr"
-  image    = "linuxserver/sonarr:latest"
-  port     = 8989
-  networks = [docker_network.media.id, docker_network.postgres.id, docker_network.traefik.id]
+  # Postgres must be registered in Consul before the database settings render.
+  depends_on = [module.postgres]
 
+  name      = "sonarr"
+  namespace = "media"
+  image     = "linuxserver/sonarr:4.0.20.3014-ls1"
+
+  job_file = format("%s/jobs/media/sonarr.nomad.hcl", path.module)
+  job_vars = {
+    database_user = var.username
+  }
   env = local.shared_env
 
-  volumes = [
-    {
-      container_path = "/config"
-      host_path      = format("/home/%s/appdata/sonarr", var.username)
-    },
-    {
-      container_path = "/mnt/media"
-      host_path      = "/mnt/media"
-    },
-    {
-      container_path = "/downloads"
-      host_path      = format("/home/%s/downloads", var.username)
-    },
-  ]
+  domain  = var.domain
+  traefik = true
+}
+
+removed {
+  from = module.sonarr.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.sonarr.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 module "seerr" {
   source = "../modules/service"
 
+  name      = "seerr"
+  namespace = "media"
+  image     = "seerr/seerr:v3.5.1"
+
+  job_file = format("%s/jobs/media/seerr.nomad.hcl", path.module)
+  env      = local.shared_env
+
   domain             = var.domain
-  name               = "seerr"
-  image              = "seerr/seerr:latest"
-  port               = 5055
   public             = true
   cloudflare_zone_id = data.cloudflare_zone.reilley_dev.id
-  networks           = [docker_network.media.id, docker_network.traefik.id]
+}
 
-  env = local.shared_env
+removed {
+  from = module.seerr.docker_container.container
 
-  command = [
-    "node",
-    "--max-opt=1",
-    "dist/index.js",
-  ]
+  lifecycle {
+    destroy = false
+  }
+}
 
-  volumes = [
-    {
-      container_path = "/app/config"
-      host_path      = format("/home/%s/appdata/seerr", var.username)
-    },
-  ]
+removed {
+  from = module.seerr.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 module "prowlarr" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "prowlarr"
-  image    = "linuxserver/prowlarr:latest"
-  port     = 9696
-  networks = [docker_network.media.id, docker_network.traefik.id]
+  name      = "prowlarr"
+  namespace = "media"
+  image     = "linuxserver/prowlarr:2.6.5.5623-ls165"
 
-  env = local.shared_env
+  job_file = format("%s/jobs/media/prowlarr.nomad.hcl", path.module)
+  env      = local.shared_env
 
-  volumes = [
-    {
-      container_path = "/config"
-      host_path      = format("/home/%s/appdata/prowlarr", var.username)
-    },
-  ]
+  domain  = var.domain
+  traefik = true
+}
+
+removed {
+  from = module.prowlarr.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.prowlarr.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 module "flaresolverr" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "flaresolverr"
-  image    = "flaresolverr/flaresolverr:latest"
-  port     = 8191
-  networks = [docker_network.media.id, docker_network.traefik.id]
+  name      = "flaresolverr"
+  namespace = "media"
+  image     = "flaresolverr/flaresolverr:v3.5.2"
 
-  env = local.shared_env
+  job_file = format("%s/jobs/media/flaresolverr.nomad.hcl", path.module)
+  env      = local.shared_env
 
-  command = [
-    "/usr/local/bin/python",
-    "-u",
-    "/app/flaresolverr.py",
-  ]
+  domain  = var.domain
+  traefik = true
+}
+
+removed {
+  from = module.flaresolverr.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.flaresolverr.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 module "bazarr" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "bazarr"
-  image    = "linuxserver/bazarr:latest"
-  port     = 6767
-  networks = [docker_network.media.id, docker_network.traefik.id]
+  name      = "bazarr"
+  namespace = "media"
+  image     = "linuxserver/bazarr:v1.6.2-ls369"
 
-  env = local.shared_env
+  job_file = format("%s/jobs/media/bazarr.nomad.hcl", path.module)
+  env      = local.shared_env
 
-  volumes = [
-    {
-      container_path = "/config"
-      host_path      = format("/home/%s/appdata/bazarr", var.username)
-    },
-    {
-      container_path = "/mnt/media"
-      host_path      = "/mnt/media"
-    },
-  ]
+  domain  = var.domain
+  traefik = true
+}
+
+removed {
+  from = module.bazarr.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.bazarr.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 module "profilarr" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "profilarr"
-  image    = "ghcr.io/dictionarry-hub/profilarr:latest"
-  port     = 6868
-  networks = [docker_network.media.id, docker_network.traefik.id]
+  name      = "profilarr"
+  namespace = "media"
+  image     = "ghcr.io/dictionarry-hub/profilarr:2.3.1"
 
-  env = concat(local.shared_env, [
-    "AUTH=off",
-  ])
+  job_file = format("%s/jobs/media/profilarr.nomad.hcl", path.module)
+  env      = local.shared_env
 
-  volumes = [
-    {
-      container_path = "/config"
-      host_path      = format("/home/%s/appdata/profilarr", var.username)
-    },
-  ]
+  domain  = var.domain
+  traefik = true
+}
+
+removed {
+  from = module.profilarr.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.profilarr.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 module "unpackerr" {
   source = "../modules/service"
 
-  domain   = var.domain
-  name     = "unpackerr"
-  image    = "golift/unpackerr:latest"
-  networks = [docker_network.media.id]
+  name      = "unpackerr"
+  namespace = "media"
+  image     = "golift/unpackerr:0.16.1"
 
-  env = concat(local.shared_env, [
-    "UN_LOG_FILE=/logs/unpackerr.log",
-    "UN_SONARR_0_URL=http://sonarr.localdomain",
-    format("UN_SONARR_0_API_KEY=%s", var.sonarr_api_key),
-    "UN_RADARR_0_URL=http://radarr.localdomain",
-    format("UN_RADARR_0_API_KEY=%s", var.radarr_api_key),
-  ])
+  job_file = format("%s/jobs/media/unpackerr.nomad.hcl", path.module)
+  env      = local.shared_env
 
-  volumes = [
-    {
-      container_path = "/logs"
-      host_path      = format("/home/%s/appdata/unpackerr", var.username)
-    },
-    {
-      container_path = "/downloads"
-      host_path      = format("/home/%s/downloads", var.username)
-    },
-  ]
+  domain = var.domain
+}
+
+removed {
+  from = module.unpackerr.docker_container.container
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.unpackerr.docker_image.image
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = docker_network.media
+
+  lifecycle {
+    destroy = false
+  }
 }

@@ -50,7 +50,7 @@ func TestParseAccessLineAcceptsTimezoneAwareRFC3339Shapes(t *testing.T) {
 func TestParseAccessLineIgnoresLANAndOtherRouters(t *testing.T) {
 	t.Parallel()
 
-	for _, router := range []string{"jellyfinlocal@docker", "grafana@docker", ""} {
+	for _, router := range []string{"jellyfinlocal@consulcatalog", "grafana@consulcatalog", ""} {
 		t.Run(router, func(t *testing.T) {
 			event, err := ParseAccessLine(accessLine(t, map[string]any{"RouterName": router}))
 			if err != nil {
@@ -182,7 +182,7 @@ func TestParseAccessLineAcceptsPythonNoncanonicalTimezoneOffsets(t *testing.T) {
 func accessLine(t *testing.T, overrides map[string]any) []byte {
 	t.Helper()
 	entry := map[string]any{
-		"RouterName":            "jellyfin@docker",
+		"RouterName":            "jellyfin@consulcatalog",
 		"ClientHost":            "203.0.113.8",
 		"DownstreamContentSize": 4096,
 		"time":                  "2026-08-09T20:14:40+10:00",
