@@ -6,10 +6,10 @@ job "${name}" {
   group "${name}" {
     # Static ports mean two copies cannot run at once, so no canary.
     update {
-      max_parallel     = 1
-      auto_revert      = true
-      min_healthy_time = "10s"
-      healthy_deadline = "2m"
+      max_parallel      = 1
+      auto_revert       = true
+      min_healthy_time  = "10s"
+      healthy_deadline  = "2m"
       progress_deadline = "3m"
     }
 

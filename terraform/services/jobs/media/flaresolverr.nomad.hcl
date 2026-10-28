@@ -6,12 +6,12 @@ job "${name}" {
   group "${name}" {
     # FlareSolverr keeps no state, so a canary can run next to the old copy.
     update {
-      max_parallel     = 1
-      canary           = 1
-      auto_promote     = true
-      auto_revert      = true
-      min_healthy_time = "10s"
-      healthy_deadline = "2m"
+      max_parallel      = 1
+      canary            = 1
+      auto_promote      = true
+      auto_revert       = true
+      min_healthy_time  = "10s"
+      healthy_deadline  = "2m"
       progress_deadline = "3m"
     }
 

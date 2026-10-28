@@ -7,10 +7,10 @@ job "${name}" {
     # Port 8080 is static, and two clients with the same torrents would send
     # duplicate announces, so the old allocation stops before the new one.
     update {
-      max_parallel     = 1
-      auto_revert      = true
-      min_healthy_time = "10s"
-      healthy_deadline = "5m"
+      max_parallel      = 1
+      auto_revert       = true
+      min_healthy_time  = "10s"
+      healthy_deadline  = "5m"
       progress_deadline = "6m"
     }
 

@@ -7,11 +7,11 @@ job "${name}" {
     # Two copies would extract the same downloads. Unpackerr has no HTTP
     # port, so the deployment watches the task state.
     update {
-      max_parallel     = 1
-      auto_revert      = true
-      health_check     = "task_states"
-      min_healthy_time = "10s"
-      healthy_deadline = "2m"
+      max_parallel      = 1
+      auto_revert       = true
+      health_check      = "task_states"
+      min_healthy_time  = "10s"
+      healthy_deadline  = "2m"
       progress_deadline = "3m"
     }
 

@@ -7,10 +7,10 @@ job "${name}" {
     # One copy tails and rotates the Traefik access log and owns the
     # checkpoint, so no canary.
     update {
-      max_parallel     = 1
-      auto_revert      = true
-      min_healthy_time = "10s"
-      healthy_deadline = "5m"
+      max_parallel      = 1
+      auto_revert       = true
+      min_healthy_time  = "10s"
+      healthy_deadline  = "5m"
       progress_deadline = "6m"
     }
 

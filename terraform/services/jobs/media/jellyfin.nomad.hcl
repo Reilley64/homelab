@@ -6,10 +6,10 @@ job "${name}" {
   group "${name}" {
     # Jellyfin writes SQLite, so two copies must not run at once.
     update {
-      max_parallel     = 1
-      auto_revert      = true
-      min_healthy_time = "10s"
-      healthy_deadline = "5m"
+      max_parallel      = 1
+      auto_revert       = true
+      min_healthy_time  = "10s"
+      healthy_deadline  = "5m"
       progress_deadline = "6m"
     }
 
