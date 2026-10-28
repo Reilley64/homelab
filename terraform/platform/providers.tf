@@ -1,3 +1,12 @@
 provider "aws" {
   region = "ap-southeast-2"
 }
+
+# The control plane providers read their address, token and CA from the
+# environment (VAULT_*, CONSUL_HTTP_*, CONSUL_CACERT, NOMAD_*), so no token
+# reaches a variable or the state.
+provider "consul" {}
+
+provider "nomad" {}
+
+provider "vault" {}
