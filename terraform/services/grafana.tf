@@ -63,10 +63,10 @@ resource "grafana_folder" "homelab" {
   title = "Homelab"
 }
 
-resource "grafana_dashboard" "jellyfin" {
+resource "grafana_dashboard" "public_services" {
   folder = grafana_folder.homelab.uid
 
-  config_json = templatefile(format("%s/config/jellyfin-dashboard.json.tftpl", path.module), {
+  config_json = templatefile(format("%s/config/public-services-dashboard.json.tftpl", path.module), {
     datasource_uid = grafana_data_source.prometheus.uid
   })
 }
@@ -270,6 +270,11 @@ resource "grafana_rule_group" "alerts" {
       }
     }
   }
+}
+
+moved {
+  from = grafana_dashboard.jellyfin
+  to   = grafana_dashboard.public_services
 }
 
 moved {
