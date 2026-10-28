@@ -1,0 +1,19 @@
+---
+- name: Install Docker
+  community.general.portage:
+    package:
+      - app-containers/docker
+      - app-containers/docker-cli
+
+- name: Add the admin user to the docker group
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups:
+      - docker
+    append: true
+
+- name: Enable Docker
+  ansible.builtin.systemd_service:
+    name: docker.service
+    enabled: true
+    state: started

@@ -1,0 +1,13 @@
+[Unit]
+Description={{ item.description }}
+After=network-online.target
+Wants=network-online.target
+
+[Mount]
+What={{ item.what }}
+Where=/mnt/{{ item.name }}
+Type=cifs
+Options=credentials=/etc/smbcredentials/nas,vers=3.1.1,uid={{ nas_mounts_uid }},gid={{ nas_mounts_gid }},echo_interval=5,retrans=2
+
+[Install]
+WantedBy=multi-user.target

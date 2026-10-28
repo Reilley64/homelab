@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  author: Reilley64
+  description: Gentoo host baseline
+  license: proprietary
+  min_ansible_version: "2.18"
+  platforms:
+    - name: Gentoo
+      versions:
+        - all
+dependencies: []

@@ -1,0 +1,19 @@
+---
+base_timezone: Australia/Melbourne
+base_locale: en_AU.UTF-8
+base_journald_system_max_use: 1G
+base_packages:
+  - app-admin/sudo
+  - app-misc/fastfetch
+  - app-misc/resolve-march-native
+  - app-misc/tmux
+  - app-portage/gentoolkit
+  - app-shells/fish
+  - net-misc/chrony
+  - sys-apps/dmidecode
+  - sys-apps/i2c-tools
+  - sys-block/io-scheduler-udev-rules
+  - sys-kernel/gentoo-kernel
+  - sys-kernel/installkernel
+  - sys-kernel/linux-firmware
+  - sys-kernel/modprobed-db

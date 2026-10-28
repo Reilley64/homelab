@@ -1,0 +1,106 @@
+---
+- name: Set the hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+    use: systemd
+
+- name: Set the timezone
+  community.general.timezone:
+    name: "{{ base_timezone }}"
+
+- name: Generate the locale
+  community.general.locale_gen:
+    name: "{{ base_locale }}"
+
+- name: Set the system locale
+  ansible.builtin.template:
+    src: locale.conf.j2
+    dest: /etc/locale.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Configure Portage
+  ansible.builtin.template:
+    src: "portage/{{ item }}.j2"
+    dest: "/etc/portage/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - make.conf
+    - package.use/00cpu-flags
+    - package.use/00video_cards
+    - package.use/installkernal
+    - repos.conf/gentoo.conf
+    - binrepos.conf/gentoo.conf
+
+- name: Remove the Nomad keyword
+  ansible.builtin.file:
+    path: /etc/portage/package.accept_keywords/nomad
+    state: absent
+
+- name: Install base packages
+  community.general.portage:
+    package: "{{ base_packages }}"
+
+- name: Remove the Gentoo tree HashiCorp packages
+  community.general.portage:
+    package:
+      - app-admin/consul
+      - app-admin/vault
+      - sys-cluster/nomad
+    state: absent
+
+- name: Allow wheel to use sudo without a password
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers
+    regexp: "^%wheel "
+    line: "%wheel ALL=(ALL:ALL) NOPASSWD: ALL"
+    validate: visudo -cf %s
+
+- name: Add the admin user to its groups
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups:
+      - wheel
+      - audio
+      - users
+    append: true
+
+- name: Configure wired networking
+  ansible.builtin.copy:
+    src: 50-dhcp.network
+    dest: /etc/systemd/network/50-dhcp.network
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload networkd
+
+- name: Create the journald drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/journald.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Cap the journal size
+  ansible.builtin.template:
+    src: journald.conf.j2
+    dest: /etc/systemd/journald.conf.d/size.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart journald
+
+- name: Enable base services
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - chronyd.service
+    - sshd.service
+    - systemd-networkd.service
+    - systemd-resolved.service

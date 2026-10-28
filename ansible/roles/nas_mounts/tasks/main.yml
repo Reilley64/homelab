@@ -1,0 +1,28 @@
+---
+- name: Install CIFS utilities
+  community.general.portage:
+    package: net-fs/cifs-utils
+
+- name: Write the mount units
+  ansible.builtin.template:
+    src: nas.mount.j2
+    dest: "/etc/systemd/system/mnt-{{ item.name }}.mount"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ nas_mounts_shares }}"
+  loop_control:
+    label: "{{ item.name }}"
+  notify: Reload systemd
+
+- name: Apply changed mount units
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable the mounts
+  ansible.builtin.systemd_service:
+    name: "mnt-{{ item.name }}.mount"
+    enabled: true
+    state: started
+  loop: "{{ nas_mounts_shares }}"
+  loop_control:
+    label: "{{ item.name }}"

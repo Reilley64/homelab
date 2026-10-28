@@ -1,0 +1,9 @@
+---
+- name: Configure homelab hosts
+  hosts: all
+  become: true
+  roles:
+    - base
+    - docker
+    - nas_mounts
+    - node_exporter

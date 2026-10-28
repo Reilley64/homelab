@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  author: Reilley64
+  description: Docker engine from the Gentoo tree
+  license: proprietary
+  min_ansible_version: "2.18"
+  platforms:
+    - name: Gentoo
+      versions:
+        - all
+dependencies: []
