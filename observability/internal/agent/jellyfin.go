@@ -61,7 +61,7 @@ func (c JellyfinClient) FetchSessions(ctx context.Context) ([]Session, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create Jellyfin /Sessions request: %w", err)
 	}
-	request.Header.Set("X-Emby-Token", c.APIKey)
+	request.Header.Set("Authorization", fmt.Sprintf("MediaBrowser Token=%q", c.APIKey))
 	request.Header.Set("Accept", "application/json")
 
 	client := c.HTTPClient

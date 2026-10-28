@@ -54,6 +54,20 @@ variable "sonarr_api_key" {
   sensitive = true
 }
 
+variable "tabletop_signing_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "nas_username" {
+  type        = string
+}
+
+variable "nas_password" {
+  type        = string
+  sensitive   = true
+}
+
 variable "wireguard_private_key" {
   type      = string
   sensitive = true

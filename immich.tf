@@ -5,7 +5,7 @@ resource "docker_network" "immich" {
 
 locals {
   immich_env = [
-    "DB_URL=postgresql://${var.username}:${var.password}@immich-postgres:5432/immich",
+    format("DB_URL=postgresql://%s:%s@immich-postgres:5432/immich", var.username, var.password),
     "REDIS_HOSTNAME=immich-redis"
   ]
 }
@@ -48,7 +48,7 @@ module "immich_machine_learning" {
   volumes = [
     {
       container_path = "/data"
-      host_path      = "/home/${var.username}/appdata/immich/cache"
+      host_path      = format("/home/%s/appdata/immich/cache", var.username)
     }
   ]
 }
@@ -75,8 +75,8 @@ module "immich_postgres" {
   networks = [docker_network.immich.id]
 
   env = concat(local.shared_env, [
-    "POSTGRES_USER=${var.username}",
-    "POSTGRES_PASSWORD=${var.password}",
+    format("POSTGRES_USER=%s", var.username),
+    format("POSTGRES_PASSWORD=%s", var.password),
     "POSTGRES_DB=immich"
   ])
 
@@ -85,7 +85,7 @@ module "immich_postgres" {
   volumes = [
     {
       container_path = "/var/lib/postgresql/data"
-      host_path      = "/home/${var.username}/appdata/immich/database"
+      host_path      = format("/home/%s/appdata/immich/database", var.username)
     },
   ]
 }

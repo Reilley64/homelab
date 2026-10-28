@@ -10,7 +10,7 @@ module "bitwarden" {
   networks           = [docker_network.traefik.id]
 
   env = concat(local.shared_env, [
-    "DOMAIN=https://bitwarden.${var.domain}"
+    format("DOMAIN=https://bitwarden.%s", var.domain)
   ])
 
   command = [
@@ -20,7 +20,7 @@ module "bitwarden" {
   volumes = [
     {
       container_path = "/data"
-      host_path      = "/home/${var.username}/appdata/bitwarden"
+      host_path      = format("/home/%s/appdata/bitwarden", var.username)
     },
   ]
 }

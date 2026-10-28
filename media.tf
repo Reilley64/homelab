@@ -19,7 +19,7 @@ module "jellyfin" {
   uploads = [
     {
       file    = "/config/logging.json"
-      content = file("${path.module}/observability/jellyfin-logging.json")
+      content = file(format("%s/observability/jellyfin-logging.json", path.module))
     },
   ]
 
@@ -33,7 +33,7 @@ module "jellyfin" {
   volumes = [
     {
       container_path = "/config"
-      host_path      = "/home/${var.username}/appdata/jellyfin"
+      host_path      = format("/home/%s/appdata/jellyfin", var.username)
     },
     {
       container_path = "/mnt/media"
@@ -43,8 +43,7 @@ module "jellyfin" {
 }
 
 module "radarr" {
-  source     = "./modules/service"
-  depends_on = [module.postgres]
+  source = "./modules/service"
 
   domain   = var.domain
   name     = "radarr"
@@ -57,7 +56,7 @@ module "radarr" {
   volumes = [
     {
       container_path = "/config"
-      host_path      = "/home/${var.username}/appdata/radarr"
+      host_path      = format("/home/%s/appdata/radarr", var.username)
     },
     {
       container_path = "/mnt/media"
@@ -65,14 +64,13 @@ module "radarr" {
     },
     {
       container_path = "/downloads"
-      host_path      = "/home/${var.username}/downloads"
+      host_path      = format("/home/%s/downloads", var.username)
     },
   ]
 }
 
 module "sonarr" {
-  source     = "./modules/service"
-  depends_on = [module.postgres]
+  source = "./modules/service"
 
   domain   = var.domain
   name     = "sonarr"
@@ -85,7 +83,7 @@ module "sonarr" {
   volumes = [
     {
       container_path = "/config"
-      host_path      = "/home/${var.username}/appdata/sonarr"
+      host_path      = format("/home/%s/appdata/sonarr", var.username)
     },
     {
       container_path = "/mnt/media"
@@ -93,7 +91,7 @@ module "sonarr" {
     },
     {
       container_path = "/downloads"
-      host_path      = "/home/${var.username}/downloads"
+      host_path      = format("/home/%s/downloads", var.username)
     },
   ]
 }
@@ -112,14 +110,15 @@ module "seerr" {
   env = local.shared_env
 
   command = [
-    "npm",
-    "start",
+    "node",
+    "--max-opt=1",
+    "dist/index.js",
   ]
 
   volumes = [
     {
       container_path = "/app/config"
-      host_path      = "/home/${var.username}/appdata/seerr"
+      host_path      = format("/home/%s/appdata/seerr", var.username)
     },
   ]
 }
@@ -138,7 +137,7 @@ module "prowlarr" {
   volumes = [
     {
       container_path = "/config"
-      host_path      = "/home/${var.username}/appdata/prowlarr"
+      host_path      = format("/home/%s/appdata/prowlarr", var.username)
     },
   ]
 }
@@ -175,7 +174,7 @@ module "bazarr" {
   volumes = [
     {
       container_path = "/config"
-      host_path      = "/home/${var.username}/appdata/bazarr"
+      host_path      = format("/home/%s/appdata/bazarr", var.username)
     },
     {
       container_path = "/mnt/media"
@@ -200,7 +199,7 @@ module "profilarr" {
   volumes = [
     {
       container_path = "/config"
-      host_path      = "/home/${var.username}/appdata/profilarr"
+      host_path      = format("/home/%s/appdata/profilarr", var.username)
     },
   ]
 }
@@ -216,19 +215,19 @@ module "unpackerr" {
   env = concat(local.shared_env, [
     "UN_LOG_FILE=/logs/unpackerr.log",
     "UN_SONARR_0_URL=http://sonarr.localdomain",
-    "UN_SONARR_0_API_KEY=${var.sonarr_api_key}",
+    format("UN_SONARR_0_API_KEY=%s", var.sonarr_api_key),
     "UN_RADARR_0_URL=http://radarr.localdomain",
-    "UN_RADARR_0_API_KEY=${var.radarr_api_key}",
+    format("UN_RADARR_0_API_KEY=%s", var.radarr_api_key),
   ])
 
   volumes = [
     {
       container_path = "/logs"
-      host_path      = "/home/${var.username}/appdata/unpackerr"
+      host_path      = format("/home/%s/appdata/unpackerr", var.username)
     },
     {
-      container_path = "/mnt/media"
-      host_path      = module.media.target
+      container_path = "/downloads"
+      host_path      = format("/home/%s/downloads", var.username)
     },
   ]
 }

@@ -46,8 +46,8 @@ func TestJellyfinClientFetchSessions(t *testing.T) {
 		if r.URL.Path != "/Sessions" {
 			t.Errorf("path = %s, want /Sessions", r.URL.Path)
 		}
-		if got := r.Header.Get("X-Emby-Token"); got != "secret" {
-			t.Errorf("X-Emby-Token = %q, want secret", got)
+		if got := r.Header.Get("Authorization"); got != `MediaBrowser Token="secret"` {
+			t.Errorf("Authorization = %q, want MediaBrowser Token=\"secret\"", got)
 		}
 		if got := r.Header.Get("Accept"); got != "application/json" {
 			t.Errorf("Accept = %q, want application/json", got)

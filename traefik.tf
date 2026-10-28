@@ -1,6 +1,18 @@
+locals {
+  # Jellyfin trusts X-Forwarded-For only from this address (KnownProxies in
+  # ~/appdata/jellyfin/network.xml). Docker allocates from the bottom of the
+  # subnet, so the top address stays free while Traefik is recreated.
+  traefik_ip = "172.22.255.254"
+}
+
 resource "docker_network" "traefik" {
   name   = "traefik"
   driver = "bridge"
+
+  ipam_config {
+    subnet  = "172.22.0.0/16"
+    gateway = "172.22.0.1"
+  }
 }
 
 module "traefik" {
@@ -10,6 +22,10 @@ module "traefik" {
   name     = "traefik"
   image    = "traefik:latest"
   networks = [docker_network.traefik.id]
+
+  ipv4_addresses = {
+    (docker_network.traefik.id) = local.traefik_ip
+  }
 
   ports = [
     {
@@ -58,11 +74,11 @@ module "traefik" {
     },
     {
       container_path = "/letsencrypt"
-      host_path      = "/home/${var.username}/appdata/letsencrypt"
+      host_path      = format("/home/%s/appdata/letsencrypt", var.username)
     },
     {
       container_path = "/var/log/traefik"
-      host_path      = "/home/${var.username}/appdata/traefik/log"
+      host_path      = format("/home/%s/appdata/traefik/log", var.username)
     },
   ]
 }

@@ -55,11 +55,23 @@ variable "cloudflare_zone_id" {
   default = null
 }
 
+variable "labels" {
+  type        = map(string)
+  default     = {}
+  description = "Extra container labels, such as Traefik routers and middlewares beyond the module's own."
+}
+
 # --- networking ---
 
 variable "networks" {
   type    = list(string)
   default = []
+}
+
+variable "ipv4_addresses" {
+  type        = map(string)
+  default     = {}
+  description = "Fixed IPv4 address per network, keyed by network id."
 }
 
 variable "forward" {
@@ -104,6 +116,29 @@ variable "capabilities" {
   default = []
 }
 
+variable "cpus" {
+  type    = string
+  default = null
+}
+
+variable "memory" {
+  type    = string
+  default = null
+}
+
+variable "memory_swap" {
+  type    = number
+  default = null
+}
+
+variable "rolling" {
+  type = object({
+    healthcheck = list(string)
+  })
+  default     = null
+  description = "Deploy without downtime: start the replacement container, wait for its healthcheck to pass, then remove the old one. The container name gets a hash suffix; other containers still reach it by var.name through a network alias. Unsuitable for containers that can't run twice at once, such as ones that publish host ports, use fixed addresses or write to a volume."
+}
+
 # --- host access ---
 
 variable "devices" {
@@ -142,4 +177,10 @@ variable "uploads" {
   }))
   default     = []
   description = "Files written into the container between create and start, so config can live in this repo instead of on the host. Changing content replaces the container."
+}
+
+variable "otel_resource_attributes" {
+  description = "OpenTelemetry resource attributes passed as OTEL_RESOURCE_ATTRIBUTES; container.name is added."
+  type        = map(string)
+  default     = {}
 }

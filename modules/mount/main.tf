@@ -1,6 +1,16 @@
 resource "null_resource" "media" {
+  triggers = {
+    unit_file = templatefile(format("%s/mnt-name.tftpl", path.module), {
+      description = var.description,
+      source      = var.remote
+      target      = var.target
+      uid         = var.uid
+      gid         = var.gid
+    })
+  }
+
   provisioner "file" {
-    content = templatefile("${path.module}/mnt-name.tpl", {
+    content = templatefile(format("%s/mnt-name.tftpl", path.module), {
       description = var.description,
       source      = var.remote
       target      = var.target
@@ -8,14 +18,15 @@ resource "null_resource" "media" {
       gid         = var.gid
     })
 
-    destination = "/tmp/${var.name}.mount"
+    destination = format("/tmp/%s.mount", var.name)
   }
 
   provisioner "remote-exec" {
     inline = [
-      "sudo mv /tmp/${var.name}.mount /etc/systemd/system/",
+      format("sudo mv /tmp/%s.mount /etc/systemd/system/", var.name),
       "sudo systemctl daemon-reload",
-      "sudo systemctl enable --now ${var.name}.mount",
+      format("sudo systemctl enable --now %s.mount", var.name),
+      format("sudo systemctl restart %s.mount", var.name),
     ]
   }
 

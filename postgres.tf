@@ -19,8 +19,8 @@ module "postgres" {
   ]
 
   env = concat(local.shared_env, [
-    "POSTGRES_USER=${var.username}",
-    "POSTGRES_PASSWORD=${var.password}",
+    format("POSTGRES_USER=%s", var.username),
+    format("POSTGRES_PASSWORD=%s", var.password),
   ])
 
   command = [
@@ -30,7 +30,7 @@ module "postgres" {
   volumes = [
     {
       container_path = "/var/lib/postgresql/data"
-      host_path      = "/home/${var.username}/appdata/postgres"
+      host_path      = format("/home/%s/appdata/postgres", var.username)
     },
   ]
 }

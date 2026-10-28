@@ -23,7 +23,7 @@ module "gluetun" {
   env = concat(local.shared_env, [
     "VPN_SERVICE_PROVIDER=protonvpn",
     "VPN_TYPE=wireguard",
-    "WIREGUARD_PRIVATE_KEY=${var.wireguard_private_key}",
+    format("WIREGUARD_PRIVATE_KEY=%s", var.wireguard_private_key),
     "PORT_FORWARD_ONLY=on",
     "VPN_PORT_FORWARDING=on",
     "VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'wget -O- --retry-connrefused --post-data \"json={\\\"listen_port\\\":{{PORT}},\\\"current_network_interface\\\":\\\"{{VPN_INTERFACE}}\\\",\\\"random_port\\\":false,\\\"upnp\\\":false}\" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'",
@@ -44,10 +44,13 @@ module "gluetun" {
 module "qbittorrent" {
   source = "./modules/service"
 
-  domain  = var.domain
-  name    = "qbittorrent"
-  image   = "linuxserver/qbittorrent:5.2.3"
-  forward = "container:${module.gluetun.id}"
+  domain      = var.domain
+  name        = "qbittorrent"
+  image       = "linuxserver/qbittorrent:5.2.3-libtorrentv1"
+  forward     = format("container:%s", module.gluetun.id)
+  cpus        = "4.0"
+  memory      = "8192"
+  memory_swap = 8192
 
   env = concat(local.shared_env, [
     "WEBUI_PORT=8080",
@@ -56,11 +59,11 @@ module "qbittorrent" {
   volumes = [
     {
       container_path = "/config"
-      host_path      = "/home/${var.username}/appdata/qbittorrent"
+      host_path      = format("/home/%s/appdata/qbittorrent", var.username)
     },
     {
       container_path = "/downloads"
-      host_path      = "/home/${var.username}/downloads"
+      host_path      = format("/home/%s/downloads", var.username)
     },
     {
       container_path = "/mnt/media"

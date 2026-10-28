@@ -14,7 +14,7 @@ resource "docker_container" "vaultwarden" {
   restart = "unless-stopped"
 
   env = concat(local.shared_env, [
-    "ADMIN_TOKEN=${var.arcto_vaultwarden_admin_token}",
+    format("ADMIN_TOKEN=%s", var.arcto_vaultwarden_admin_token),
   ])
 
   command = [
@@ -61,7 +61,7 @@ resource "docker_container" "vaultwarden" {
 
   volumes {
     container_path = "/data"
-    host_path      = "/home/${var.username}/appdata/arcto/vaultwarden"
+    host_path      = format("/home/%s/appdata/arcto/vaultwarden", var.username)
   }
 
   ports {

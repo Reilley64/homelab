@@ -1,5 +1,5 @@
 provider "docker" {
-  host = "ssh://${var.username}@192.168.86.199"
+  host = format("ssh://%s@192.168.86.199", var.username)
 }
 
 provider "cloudflare" {
@@ -8,7 +8,7 @@ provider "cloudflare" {
 
 provider "grafana" {
   url  = "http://grafana.localdomain"
-  auth = "admin:${var.password}"
+  auth = format("admin:%s", var.password)
 }
 
 provider "unifi" {
@@ -21,8 +21,8 @@ provider "unifi" {
 locals {
   shared_env = [
     "TZ=Australia/Melbourne",
-    "PGID=${var.gid}",
-    "PUID=${var.uid}",
+    format("PGID=%s", var.gid),
+    format("PUID=%s", var.uid),
   ]
 }
 
@@ -43,7 +43,7 @@ module "diun" {
     "DIUN_WATCH_SCHEDULE=0 */6 * * *",
     "DIUN_WATCH_JITTER=30s",
     "DIUN_PROVIDERS_DOCKER=true",
-    "DIUN_NOTIF_DISCORD_WEBHOOKURL=${var.discord_webhook}",
+    format("DIUN_NOTIF_DISCORD_WEBHOOKURL=%s", var.discord_webhook),
   ])
 
   command = [
@@ -57,7 +57,7 @@ module "diun" {
     },
     {
       container_path = "/data"
-      host_path      = "/home/${var.username}/appdata/diun"
+      host_path      = format("/home/%s/appdata/diun", var.username)
     },
   ]
 }
@@ -76,8 +76,8 @@ module "ddns" {
   image  = "favonia/cloudflare-ddns:1.17.0"
 
   env = concat(local.shared_env, [
-    "CLOUDFLARE_API_TOKEN=${var.cloudflare_api_token}",
-    "DOMAINS=app.${var.domain}",
+    format("CLOUDFLARE_API_TOKEN=%s", var.cloudflare_api_token),
+    format("DOMAINS=app.%s", var.domain),
     "IP6_PROVIDER=none",
     "RECORD_COMMENT=managed by cloudflare-ddns",
   ])
