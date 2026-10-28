@@ -10,6 +10,7 @@ job "${name}" {
       auto_revert      = true
       min_healthy_time = "10s"
       healthy_deadline = "2m"
+      progress_deadline = "3m"
     }
 
     network {
@@ -48,6 +49,9 @@ job "${name}" {
         DIUN_PROVIDERS_NOMAD                = "true"
         DIUN_PROVIDERS_NOMAD_WATCHBYDEFAULT = "true"
         NOMAD_ADDR                          = "unix://$${NOMAD_SECRETS_DIR}/api.sock"
+        # Diun builds its Nomad client from its own settings and ignores the
+        # NOMAD_TOKEN that identity puts in the environment.
+        DIUN_PROVIDERS_NOMAD_SECRETID = "$${NOMAD_TOKEN}"
       }
 
       template {

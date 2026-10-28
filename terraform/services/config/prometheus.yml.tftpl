@@ -10,7 +10,7 @@ scrape_configs:
       - server: 192.168.86.199:8501
         scheme: https
         authorization:
-          credentials_file: /secrets/consul_token
+          credentials_file: /secrets/prometheus_consul_token
         tls_config:
           ca_file: /local/ca.crt
     relabel_configs:
@@ -19,6 +19,12 @@ scrape_configs:
         action: keep
       - source_labels: [__meta_consul_service]
         target_label: service
+      # A container cannot reach its own published port on 10.91.0.1 (no
+      # hairpin NAT on the Nomad bridge), so Prometheus scrapes itself locally.
+      - source_labels: [__meta_consul_service]
+        regex: prometheus
+        target_label: __address__
+        replacement: localhost:9090
 
   # The host's node_exporter. The backups job below keeps the backup script's
   # textfile metrics, so they are dropped here to avoid two copies.
@@ -45,7 +51,7 @@ scrape_configs:
     params:
       format: [prometheus]
     authorization:
-      credentials_file: /secrets/consul_token
+      credentials_file: /secrets/prometheus_consul_token
     tls_config:
       ca_file: /local/ca.crt
     static_configs:

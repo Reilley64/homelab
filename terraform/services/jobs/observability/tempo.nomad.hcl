@@ -10,6 +10,7 @@ job "${name}" {
       auto_revert      = true
       min_healthy_time = "10s"
       healthy_deadline = "5m"
+      progress_deadline = "6m"
     }
 
     # Consul drops the allocation before it stops, so Traefik and Prometheus

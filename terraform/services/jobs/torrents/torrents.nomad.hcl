@@ -11,6 +11,7 @@ job "${name}" {
       auto_revert      = true
       min_healthy_time = "10s"
       healthy_deadline = "5m"
+      progress_deadline = "6m"
     }
 
     # Every task in the group shares this network namespace, as

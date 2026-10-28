@@ -12,6 +12,7 @@ job "${name}" {
       health_check     = "task_states"
       min_healthy_time = "10s"
       healthy_deadline = "2m"
+      progress_deadline = "3m"
     }
 
     network {

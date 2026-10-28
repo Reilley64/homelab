@@ -10,6 +10,7 @@ job "${name}" {
       auto_revert      = true
       min_healthy_time = "10s"
       healthy_deadline = "5m"
+      progress_deadline = "6m"
     }
 
     # Consul drops the allocation before it stops, so Traefik and Prometheus
@@ -72,6 +73,10 @@ job "${name}" {
 %{ for key, value in env ~}
         ${key} = ${jsonencode(value)}
 %{ endfor ~}
+        # consul {} sets CONSUL_HTTP_TOKEN to the task's own token, which lacks
+        # agent:read. Consul service discovery would send it instead of the
+        # authorization header, and the Consul client reads this file first.
+        CONSUL_HTTP_TOKEN_FILE = "/secrets/prometheus_consul_token"
       }
 
       # A moved blackbox exporter only needs a config reload.
@@ -88,9 +93,11 @@ job "${name}" {
       }
 
       # Prometheus rereads credential files on every request, so a new token
-      # needs no restart.
+      # needs no restart. Nomad writes the task's own Consul token, which
+      # lacks agent:read, to secrets/consul_token, so this file needs
+      # another name.
       template {
-        destination = "secrets/consul_token"
+        destination = "secrets/prometheus_consul_token"
         change_mode = "noop"
         data        = <<-EOT
           {{ with secret "kv/data/${namespace}/${name}" }}{{ .Data.data.consul_token }}{{ end }}
