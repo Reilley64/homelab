@@ -26,3 +26,4 @@
   loop: "{{ nas_mounts_shares }}"
   loop_control:
     label: "{{ item.name }}"
+  ignore_errors: "{{ ansible_check_mode }}"
