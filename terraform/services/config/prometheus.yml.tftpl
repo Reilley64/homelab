@@ -26,23 +26,10 @@ scrape_configs:
         target_label: __address__
         replacement: localhost:9090
 
-  # The host's node_exporter. The backups job below keeps the backup script's
-  # textfile metrics, so they are dropped here to avoid two copies.
+  # The host's node_exporter, including the backup script's textfile metrics.
   - job_name: node
     static_configs:
       - targets: ["192.168.86.199:9100"]
-    metric_relabel_configs:
-      - source_labels: [__name__]
-        regex: homelab_backup_.*
-        action: drop
-
-  - job_name: backups
-    static_configs:
-      - targets: ["192.168.86.199:9100"]
-    metric_relabel_configs:
-      - source_labels: [__name__]
-        regex: homelab_backup_.*
-        action: keep
 
   # The control plane runs on the host, outside Nomad.
   - job_name: consul
