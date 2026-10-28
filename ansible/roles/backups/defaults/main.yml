@@ -20,10 +20,6 @@ backups_excludes:
   - /home/reilley/appdata/jellyfin/data/data/jellyfin.db*
   - /home/reilley/appdata/bitwarden/db.sqlite3*
   - /home/reilley/appdata/arcto/vaultwarden/db.sqlite3*
-backups_postgres_container: postgres
-# Set to true at the cutover. The Nomad job ops/postgres-dump then writes the
-# dumps, and the script only checks that they are less than a day old.
-backups_postgres_dump_job: false
 backups_sqlite_databases:
   - name: jellyfin
     path: /home/reilley/appdata/jellyfin/data/data/jellyfin.db
