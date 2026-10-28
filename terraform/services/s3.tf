@@ -8,7 +8,7 @@ resource "docker_network" "s3" {
 }
 
 module "s3" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain             = var.domain
   name               = "s3"

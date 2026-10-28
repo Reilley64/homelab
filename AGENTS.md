@@ -6,7 +6,7 @@ Guidance for coding agents working in this repository.
 
 A personal homelab managed with Terraform. The Docker provider connects over SSH to one host (`192.168.86.199`), and every service runs there as a container behind Traefik. Terraform also manages public DNS in Cloudflare, LAN DNS in UniFi, and Grafana's configuration.
 
-Credentials and other sensitive values live in `.auto.tfvars`, which is gitignored. `variables.tf` lists the required inputs. State lives in the local `terraform.tfstate` file; there is no remote backend.
+The Terraform root is `terraform/services/`; run every Terraform command from there. Credentials and other sensitive values live in `terraform/services/.auto.tfvars`, which is gitignored. `variables.tf` lists the required inputs. State lives in the local `terraform/services/terraform.tfstate` file; there is no remote backend.
 
 ## How to work here
 
@@ -20,7 +20,7 @@ Deliver what was asked, at the scope intended. If a request looks mistaken or a 
 
 ### Service module
 
-Build every containerized service with `modules/service/`. It creates the Docker container, the Traefik routing labels, the DNS records and the network attachments together, so a service added any other way is missing its route or its DNS name.
+Build every containerized service with `terraform/modules/service/`. It creates the Docker container, the Traefik routing labels, the DNS records and the network attachments together, so a service added any other way is missing its route or its DNS name.
 
 - Public services get `{name}.reilley.dev` and a Cloudflare CNAME.
 - LAN services get `{name}.localdomain` and a UniFi A record.
@@ -38,7 +38,7 @@ Each service domain has its own Docker network, such as `media_network` or `torr
 - `main.tf` defines `TZ`, `PUID` and `PGID` in `local.shared_env`. Every service passes it into its `env` block.
 - Persistent volumes mount from `/home/${var.username}/appdata/{service}/`.
 - qBittorrent sends all traffic through the VPN with `network_mode = "container:${module.gluetun.id}"`.
-- A service that needs a config file gets it through the service module's `uploads` variable, which writes the file into the container before it starts. Keep the file in this repository (for example `observability/prometheus.yml`), because the host has no copy. Changing an uploaded file replaces the container.
+- A service that needs a config file gets it through the service module's `uploads` variable, which writes the file into the container before it starts. Keep the file in `terraform/services/config/` (for example `prometheus.yml.tftpl`), because the host has no copy. Changing an uploaded file replaces the container.
 
 ### Observability
 

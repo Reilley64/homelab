@@ -4,7 +4,7 @@ resource "docker_network" "torrents" {
 }
 
 module "gluetun" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain     = var.domain
   name       = "gluetun"
@@ -42,7 +42,7 @@ module "gluetun" {
 }
 
 module "qbittorrent" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain      = var.domain
   name        = "qbittorrent"

@@ -60,12 +60,12 @@ variable "tabletop_signing_key" {
 }
 
 variable "nas_username" {
-  type        = string
+  type = string
 }
 
 variable "nas_password" {
-  type        = string
-  sensitive   = true
+  type      = string
+  sensitive = true
 }
 
 variable "wireguard_private_key" {

@@ -11,7 +11,7 @@ locals {
 }
 
 module "immich" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain             = var.domain
   name               = "immich"
@@ -34,7 +34,7 @@ module "immich" {
 }
 
 module "immich_machine_learning" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "immich-machine-learning"
@@ -54,7 +54,7 @@ module "immich_machine_learning" {
 }
 
 module "immich_redis" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "immich-redis"
@@ -67,7 +67,7 @@ module "immich_redis" {
 }
 
 module "immich_postgres" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "immich-postgres"

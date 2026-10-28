@@ -4,7 +4,7 @@ resource "docker_network" "postgres" {
 }
 
 module "postgres" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "postgres"

@@ -1,5 +1,5 @@
 module "media" {
-  source = "./modules/mount"
+  source = "../modules/mount"
 
   name        = "mnt-media"
   description = "Media"
@@ -12,7 +12,7 @@ module "media" {
 }
 
 module "photos" {
-  source = "./modules/mount"
+  source = "../modules/mount"
 
   name        = "mnt-photos"
   description = "Photos"
@@ -25,7 +25,7 @@ module "photos" {
 }
 
 module "roms" {
-  source = "./modules/mount"
+  source = "../modules/mount"
 
   name        = "mnt-roms"
   description = "Roms"

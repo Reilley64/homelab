@@ -1,23 +1,3 @@
-provider "docker" {
-  host = format("ssh://%s@192.168.86.199", var.username)
-}
-
-provider "cloudflare" {
-  api_token = var.cloudflare_api_token
-}
-
-provider "grafana" {
-  url  = "http://grafana.localdomain"
-  auth = format("admin:%s", var.password)
-}
-
-provider "unifi" {
-  api_url = "https://192.168.86.1"
-  api_key = var.unifi_api_key
-
-  allow_insecure = true
-}
-
 locals {
   shared_env = [
     "TZ=Australia/Melbourne",
@@ -32,7 +12,7 @@ resource "docker_image" "alpine" {
 }
 
 module "diun" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain = var.domain
   name   = "diun"
@@ -69,7 +49,7 @@ data "cloudflare_zone" "reilley_dev" {
 }
 
 module "ddns" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain = var.domain
   name   = "cloudflare-ddns"

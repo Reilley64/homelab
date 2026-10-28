@@ -16,7 +16,7 @@ resource "docker_network" "traefik" {
 }
 
 module "traefik" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "traefik"

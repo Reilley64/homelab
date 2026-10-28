@@ -1,5 +1,5 @@
 module "bitwarden" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain             = var.domain
   name               = "bitwarden"

@@ -31,7 +31,7 @@ resource "docker_network" "observability" {
 # --- collectors ---
 
 module "alloy" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "alloy"
@@ -50,7 +50,7 @@ module "alloy" {
   uploads = [
     {
       file    = "/etc/alloy/config.alloy"
-      content = file(format("%s/observability/alloy.alloy", path.module))
+      content = file(format("%s/config/alloy.alloy", path.module))
     },
   ]
 
@@ -68,7 +68,7 @@ module "alloy" {
 }
 
 module "blackbox_exporter" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "blackbox-exporter"
@@ -84,13 +84,13 @@ module "blackbox_exporter" {
   uploads = [
     {
       file    = "/etc/blackbox_exporter/config.yml"
-      content = file(format("%s/observability/blackbox.yml", path.module))
+      content = file(format("%s/config/blackbox.yml", path.module))
     },
   ]
 }
 
 module "node_exporter" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "node-exporter"
@@ -126,7 +126,7 @@ module "node_exporter" {
 }
 
 module "observability_agent" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "observability-agent"
@@ -134,11 +134,11 @@ module "observability_agent" {
   networks = [docker_network.media.id, docker_network.observability.id]
 
   build = {
-    context = abspath(format("%s/observability", path.module))
+    context = abspath(format("%s/../../observability", path.module))
     triggers = {
       source = sha256(join("", [
-        for source_path in sort(concat(["Dockerfile", "go.mod"], tolist(fileset(format("%s/observability", path.module), "**/*.go")))) :
-        format("%s:%s", source_path, filesha256(format("%s/observability/%s", path.module, source_path)))
+        for source_path in sort(concat(["Dockerfile", "go.mod"], tolist(fileset(format("%s/../../observability", path.module), "**/*.go")))) :
+        format("%s:%s", source_path, filesha256(format("%s/../../observability/%s", path.module, source_path)))
       ]))
     }
   }
@@ -171,7 +171,7 @@ module "observability_agent" {
 # --- storage ---
 
 module "loki" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "loki"
@@ -189,7 +189,7 @@ module "loki" {
   uploads = [
     {
       file    = "/etc/loki/loki.yml"
-      content = file(format("%s/observability/loki.yml", path.module))
+      content = file(format("%s/config/loki.yml", path.module))
     },
   ]
 
@@ -202,7 +202,7 @@ module "loki" {
 }
 
 module "prometheus" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "prometheus"
@@ -222,7 +222,7 @@ module "prometheus" {
   uploads = [
     {
       file = "/etc/prometheus/prometheus.yml"
-      content = templatefile(format("%s/observability/prometheus.yml.tftpl", path.module), {
+      content = templatefile(format("%s/config/prometheus.yml.tftpl", path.module), {
         public_services = local.public_services
       })
     },
@@ -237,7 +237,7 @@ module "prometheus" {
 }
 
 module "tempo" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "tempo"
@@ -254,7 +254,7 @@ module "tempo" {
   uploads = [
     {
       file    = "/etc/tempo/tempo.yml"
-      content = file(format("%s/observability/tempo.yml", path.module))
+      content = file(format("%s/config/tempo.yml", path.module))
     },
   ]
 
@@ -269,7 +269,7 @@ module "tempo" {
 # --- grafana ---
 
 module "grafana" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "grafana"
@@ -363,7 +363,7 @@ resource "grafana_folder" "homelab" {
 resource "grafana_dashboard" "jellyfin" {
   folder = grafana_folder.homelab.uid
 
-  config_json = templatefile(format("%s/observability/jellyfin-dashboard.json.tftpl", path.module), {
+  config_json = templatefile(format("%s/config/jellyfin-dashboard.json.tftpl", path.module), {
     datasource_uid = grafana_data_source.prometheus.uid
   })
 }
@@ -751,7 +751,7 @@ resource "grafana_rule_group" "public_service_tls" {
 # --- grafana mcp ---
 
 module "mcp_grafana" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "mcp-grafana"

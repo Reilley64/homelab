@@ -4,7 +4,7 @@ resource "docker_network" "media" {
 }
 
 module "jellyfin" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain             = var.domain
   name               = "jellyfin"
@@ -19,7 +19,7 @@ module "jellyfin" {
   uploads = [
     {
       file    = "/config/logging.json"
-      content = file(format("%s/observability/jellyfin-logging.json", path.module))
+      content = file(format("%s/config/jellyfin-logging.json", path.module))
     },
   ]
 
@@ -43,7 +43,7 @@ module "jellyfin" {
 }
 
 module "radarr" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "radarr"
@@ -70,7 +70,7 @@ module "radarr" {
 }
 
 module "sonarr" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "sonarr"
@@ -97,7 +97,7 @@ module "sonarr" {
 }
 
 module "seerr" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain             = var.domain
   name               = "seerr"
@@ -124,7 +124,7 @@ module "seerr" {
 }
 
 module "prowlarr" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "prowlarr"
@@ -143,7 +143,7 @@ module "prowlarr" {
 }
 
 module "flaresolverr" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "flaresolverr"
@@ -161,7 +161,7 @@ module "flaresolverr" {
 }
 
 module "bazarr" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "bazarr"
@@ -184,7 +184,7 @@ module "bazarr" {
 }
 
 module "profilarr" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "profilarr"
@@ -205,7 +205,7 @@ module "profilarr" {
 }
 
 module "unpackerr" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "unpackerr"

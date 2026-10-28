@@ -25,7 +25,7 @@ locals {
 }
 
 module "tabletop" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain             = var.domain
   name               = "tabletop"

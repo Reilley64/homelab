@@ -41,7 +41,7 @@ resource "docker_container" "homeassistant" {
 }
 
 module "piper" {
-  source = "./modules/service"
+  source = "../modules/service"
 
   domain   = var.domain
   name     = "piper"
