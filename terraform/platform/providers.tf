@@ -10,3 +10,7 @@ provider "consul" {}
 provider "nomad" {}
 
 provider "vault" {}
+
+# Reads CLOUDFLARE_API_TOKEN from the environment, the same token as the
+# services root.
+provider "cloudflare" {}

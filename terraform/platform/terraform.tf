@@ -5,6 +5,11 @@ terraform {
       version = "~> 6.0"
     }
 
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5"
+    }
+
     consul = {
       source  = "hashicorp/consul"
       version = "~> 2.23"
