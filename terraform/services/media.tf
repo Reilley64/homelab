@@ -167,7 +167,8 @@ module "selfless" {
 
   job_file = format("%s/jobs/media/selfless.nomad.hcl", path.module)
   job_vars = {
-    render_gid = 28
+    database_user = var.username
+    render_gid    = 28
   }
   env = local.shared_env
 

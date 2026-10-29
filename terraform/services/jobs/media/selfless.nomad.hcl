@@ -87,7 +87,7 @@ job "${name}" {
         env         = true
         data        = <<-EOT
           {{ with secret "kv/data/${namespace}/${name}" -}}
-          DATABASE__URL=postgresql://${name}:{{ .Data.data.database_password | urlquery }}@{{ range service "postgres" }}{{ .Address }}:{{ .Port }}{{ end }}/${name}
+          DATABASE__URL=postgresql://${database_user}:{{ .Data.data.database_password | urlquery }}@{{ range service "postgres" }}{{ .Address }}:{{ .Port }}{{ end }}/${name}
           {{ end -}}
           {{ range service "alloy-otlp" }}OTEL_EXPORTER_OTLP_ENDPOINT=http://{{ .Address }}:{{ .Port }}{{ end }}
         EOT
