@@ -155,3 +155,23 @@ module "unpackerr" {
   domain       = var.domain
   host_address = local.host_address
 }
+
+module "selfless" {
+  source = "../modules/service"
+
+  depends_on = [module.postgres]
+
+  name      = "selfless"
+  namespace = "media"
+  image     = "ghcr.io/reilley64/selfless:release"
+
+  job_file = format("%s/jobs/media/selfless.nomad.hcl", path.module)
+  job_vars = {
+    render_gid = 28
+  }
+  env = local.shared_env
+
+  domain       = var.domain
+  host_address = local.host_address
+  traefik      = true
+}
