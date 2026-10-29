@@ -31,6 +31,7 @@ client {
   network_interface     = "{{ nomad_lan_interface }}"
   cni_path              = "{{ nomad_cni_path }}"
   bridge_network_subnet = "{{ nomad_bridge_network_subnet }}"
+  max_kill_timeout      = "60s"
 
   host_network "lan" {
     interface = "{{ nomad_lan_interface }}"
