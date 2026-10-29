@@ -10,7 +10,7 @@ A personal homelab on one Gentoo host, `homelab-1` (`192.168.86.199`). Consul, V
 |---|---|
 | `ansible/` | The host: packages, mounts, node_exporter, backups, the CA and the Consul, Vault and Nomad agents |
 | `overlay/` | The Gentoo overlay with the `consul-bin`, `vault-bin` and `nomad-bin` ebuilds |
-| `terraform/platform/` | Consul, Vault and Nomad objects: ACL policies, namespaces, auth methods, the KMS auto-unseal key |
+| `terraform/platform/` | Consul, Vault and Nomad objects: ACL policies, namespaces, auth methods. AWS: the KMS auto-unseal key, the backup bucket and SES with its DNS records |
 | `terraform/services/` | The Nomad jobs, Cloudflare and UniFi DNS, Home Assistant's Consul registration and Grafana's configuration (`grafana.tf`) |
 | `terraform/modules/service/` | One service: its Nomad job, Traefik tags and DNS records |
 | `observability/` | `observability-agent`, a Go program that attributes Jellyfin egress to users. Built on the host |
@@ -43,6 +43,8 @@ Deliver what was asked, at the scope intended. If a request looks mistaken or a 
 ### Running the tools
 
 The APIs listen on the host with certificates from the homelab CA at `~/.homelab/pki/ca.crt`: Consul on `8501`, Vault on `8200` and Nomad on `4646`. Set `NOMAD_ADDR`, `CONSUL_HTTP_ADDR` and `VAULT_ADDR` with `https://`, the matching `*_CACERT` variables, and a token for each. The providers read the same variables, so no token reaches Terraform state. If you can't reach the LAN directly, open an ssh tunnel to those ports on `127.0.0.1`.
+
+The platform root also needs AWS credentials and `CLOUDFLARE_API_TOKEN`. AWS access keys for its IAM users are made by CLI, never by Terraform, so their secrets stay out of state. `terraform/platform/scripts/ses-smtp-credentials.py` makes the SES SMTP credentials.
 
 Ansible runs from `ansible/`. Install its collections with `ansible-galaxy collection install -r requirements.yml`.
 
