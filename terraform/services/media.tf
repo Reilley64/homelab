@@ -172,6 +172,8 @@ module "selfless" {
     # The smtp_host output of the platform root.
     smtp_host = "email-smtp.ap-southeast-2.amazonaws.com"
     smtp_from = format("selfless <selfless@%s>", var.domain)
+    # The admin password is the same as Grafana's, from Vault.
+    admin_username = var.username
   }
   env = local.shared_env
 

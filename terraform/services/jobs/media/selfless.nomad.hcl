@@ -83,6 +83,7 @@ job "${name}" {
         SMTP__HOST = "${smtp_host}"
         SMTP__PORT = "587"
         SMTP__FROM = "${smtp_from}"
+        ADMIN__USERNAME = "${admin_username}"
       }
 
       template {
@@ -93,6 +94,7 @@ job "${name}" {
           DATABASE__URL=postgresql://${database_user}:{{ .Data.data.database_password | urlquery }}@{{ range service "postgres" }}{{ .Address }}:{{ .Port }}{{ end }}/${name}
           SMTP__USERNAME={{ .Data.data.smtp_username }}
           SMTP__PASSWORD={{ .Data.data.smtp_password }}
+          ADMIN__PASSWORD={{ .Data.data.admin_password | toJSON }}
           {{ end -}}
           {{ range service "alloy-otlp" }}OTEL_EXPORTER_OTLP_ENDPOINT=http://{{ .Address }}:{{ .Port }}{{ end }}
         EOT
