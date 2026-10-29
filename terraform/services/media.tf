@@ -169,6 +169,9 @@ module "selfless" {
   job_vars = {
     database_user = var.username
     render_gid    = 28
+    # The smtp_host output of the platform root.
+    smtp_host = "email-smtp.ap-southeast-2.amazonaws.com"
+    smtp_from = format("selfless <selfless@%s>", var.domain)
   }
   env = local.shared_env
 

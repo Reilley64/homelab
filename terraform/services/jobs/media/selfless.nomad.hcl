@@ -80,6 +80,9 @@ job "${name}" {
 %{ for key, value in env ~}
         ${key} = ${jsonencode(value)}
 %{ endfor ~}
+        SMTP__HOST = "${smtp_host}"
+        SMTP__PORT = "587"
+        SMTP__FROM = "${smtp_from}"
       }
 
       template {
@@ -88,6 +91,8 @@ job "${name}" {
         data        = <<-EOT
           {{ with secret "kv/data/${namespace}/${name}" -}}
           DATABASE__URL=postgresql://${database_user}:{{ .Data.data.database_password | urlquery }}@{{ range service "postgres" }}{{ .Address }}:{{ .Port }}{{ end }}/${name}
+          SMTP__USERNAME={{ .Data.data.smtp_username }}
+          SMTP__PASSWORD={{ .Data.data.smtp_password }}
           {{ end -}}
           {{ range service "alloy-otlp" }}OTEL_EXPORTER_OTLP_ENDPOINT=http://{{ .Address }}:{{ .Port }}{{ end }}
         EOT
