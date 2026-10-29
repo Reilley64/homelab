@@ -180,4 +180,14 @@ module "selfless" {
   domain       = var.domain
   host_address = local.host_address
   traefik      = true
+
+  traefik_tags = [
+    "traefik.http.routers.selfless-sign-in.rule=Host(`selfless.localdomain`) && Method(`POST`) && (Path(`/api/sessions/v1`) || Path(`/admin/sign-in`))",
+    "traefik.http.routers.selfless-sign-in.entrypoints=web",
+    "traefik.http.routers.selfless-sign-in.service=selfless",
+    "traefik.http.routers.selfless-sign-in.middlewares=selfless-sign-in-limit",
+    "traefik.http.middlewares.selfless-sign-in-limit.ratelimit.average=5",
+    "traefik.http.middlewares.selfless-sign-in-limit.ratelimit.period=1m",
+    "traefik.http.middlewares.selfless-sign-in-limit.ratelimit.burst=5",
+  ]
 }
