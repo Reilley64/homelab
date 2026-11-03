@@ -56,6 +56,11 @@ job "${name}" {
       source = "${name}-images"
     }
 
+    volume "${name}-segments" {
+      type   = "host"
+      source = "${name}-segments"
+    }
+
     task "${name}" {
       driver = "docker"
       user   = "${user}"
@@ -91,6 +96,7 @@ job "${name}" {
         SMTP__FROM = "${smtp_from}"
         ADMIN__USERNAME = "${admin_username}"
         IMAGES__CACHE_DIR = "/cache/images"
+        PLAYBACK__SEGMENTS_DIR = "/segments"
       }
 
       template {
@@ -111,6 +117,11 @@ job "${name}" {
       volume_mount {
         volume      = "${name}-images"
         destination = "/cache/images"
+      }
+
+      volume_mount {
+        volume      = "${name}-segments"
+        destination = "/segments"
       }
 
       resources {

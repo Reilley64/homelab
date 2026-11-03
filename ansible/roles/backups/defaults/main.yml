@@ -15,6 +15,7 @@ backups_excludes:
   - "{{ backups_appdata_dir }}/jellyfin/cache"
   - "{{ backups_appdata_dir }}/jellyfin/data/data/introskipper/introskipper-cache.db"
   - "{{ backups_appdata_dir }}/selfless/images"
+  - "{{ backups_appdata_dir }}/selfless/segments"
   - "{{ backups_appdata_dir }}/prometheus"
   - "{{ backups_appdata_dir }}/loki"
   - "{{ backups_appdata_dir }}/tempo"

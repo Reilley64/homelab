@@ -39,6 +39,7 @@ nomad_appdata_volumes:
   - radarr
   - seerr
   - selfless/images
+  - selfless/segments
   - sonarr
   - tempo
   - traefik/log
