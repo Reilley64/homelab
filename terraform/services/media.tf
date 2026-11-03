@@ -163,7 +163,7 @@ module "selfless" {
 
   name      = "selfless"
   namespace = "media"
-  image     = "ghcr.io/reilley64/selfless:release"
+  image     = "ghcr.io/reilley64/selfless:latest"
 
   job_file = format("%s/jobs/media/selfless.nomad.hcl", path.module)
   job_vars = {
