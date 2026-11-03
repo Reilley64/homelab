@@ -102,6 +102,7 @@ job "${name}" {
           SMTP__USERNAME={{ .Data.data.smtp_username }}
           SMTP__PASSWORD={{ .Data.data.smtp_password }}
           ADMIN__PASSWORD={{ .Data.data.admin_password | toJSON }}
+          SIGNED_URLS__KEY={{ .Data.data.signed_urls_key }}
           {{ end -}}
           {{ range service "alloy-otlp" }}OTEL_EXPORTER_OTLP_ENDPOINT=http://{{ .Address }}:{{ .Port }}{{ end }}
         EOT
