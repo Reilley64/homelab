@@ -51,8 +51,14 @@ job "${name}" {
       }
     }
 
+    volume "${name}-images" {
+      type   = "host"
+      source = "${name}-images"
+    }
+
     task "${name}" {
       driver = "docker"
+      user   = "${user}"
 
       kill_timeout = "45s"
 
@@ -84,6 +90,7 @@ job "${name}" {
         SMTP__PORT = "587"
         SMTP__FROM = "${smtp_from}"
         ADMIN__USERNAME = "${admin_username}"
+        IMAGES__CACHE_DIR = "/cache/images"
       }
 
       template {
@@ -98,6 +105,11 @@ job "${name}" {
           {{ end -}}
           {{ range service "alloy-otlp" }}OTEL_EXPORTER_OTLP_ENDPOINT=http://{{ .Address }}:{{ .Port }}{{ end }}
         EOT
+      }
+
+      volume_mount {
+        volume      = "${name}-images"
+        destination = "/cache/images"
       }
 
       resources {

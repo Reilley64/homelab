@@ -38,6 +38,7 @@ nomad_appdata_volumes:
   - qbittorrent
   - radarr
   - seerr
+  - selfless/images
   - sonarr
   - tempo
   - traefik/log

@@ -167,6 +167,7 @@ module "selfless" {
 
   job_file = format("%s/jobs/media/selfless.nomad.hcl", path.module)
   job_vars = {
+    user          = format("%s:%s", var.uid, var.gid)
     database_user = var.username
     render_gid    = 28
     # The smtp_host output of the platform root.
