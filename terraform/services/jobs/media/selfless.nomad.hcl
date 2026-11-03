@@ -127,7 +127,7 @@ job "${name}" {
       resources {
         cpu        = 500
         memory     = 256
-        memory_max = 1024
+        memory_max = 4096
       }
     }
   }
